@@ -8,10 +8,7 @@ Example configuration file for Cursor (probably in `~/.cursor/mcp.json`):
 {
   "mcpServers": {
     "mcp-server": {
-      "command": "/home/sbaird/code/mcp-server/.venv/bin/python",
-      "args": [
-        "/home/sbaird/code/mcp-server/server.py"
-      ],
+      "command": "/home/sbaird/code/mcp-server/server.sh",
       "description": "A simple MCP server to query Jira issues"
     }
   }
