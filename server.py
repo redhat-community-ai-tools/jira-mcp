@@ -46,4 +46,3 @@ def get_jira(issue_key: str) -> str:
 if __name__ == "__main__":
     print(f"Using JIRA_URL={JIRA_URL}")
     mcp.run()
-
