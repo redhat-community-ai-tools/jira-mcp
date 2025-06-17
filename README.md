@@ -22,6 +22,9 @@ Example configuration file for Cursor (probably in `~/.cursor/mcp.json`):
 * Create a [Jira token here][jira-token]
 * Copy `.env.example` to `.env` and add your token to that file
 * Go to "Tools & Integrations" in the Cursor settings and paste in the JSON
-   from above. Adjust the paths as appropriate.
+   from above. Adjust the path as appropriate.
+* If it's working you should see a green indicator and "1 tools enabled"
+* You should then be able to refer to Jiras in the chat panel, e.g. "What is
+   jira EC-1324 about"
 
 [jira-token]: https://issues.redhat.com/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens
