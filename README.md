@@ -2,6 +2,12 @@
 
 For use with Cursor to provide access to Jira.
 
+> [!NOTE]
+> This project is experimental and was initially created as a learning exercise.
+> Be aware there are more capable and mature Jira MCP solutions available,
+> such as [sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian),
+> and Atlasian's own [MCP Server](https://www.atlassian.com/platform/remote-mcp-server).
+
 Example configuration file for Cursor (probably in `~/.cursor/mcp.json`):
 
 ```json
