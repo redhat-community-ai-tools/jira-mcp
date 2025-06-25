@@ -13,8 +13,8 @@ Example configuration file for Cursor (probably in `~/.cursor/mcp.json`):
 ```json
 {
   "mcpServers": {
-    "mcp-server": {
-      "command": "/home/sbaird/code/mcp-server/server.sh",
+    "jira-mcp": {
+      "command": "/some/path/jira-mcp/server.sh",
       "description": "A simple MCP server to query Jira issues"
     }
   }
