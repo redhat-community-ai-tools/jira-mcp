@@ -1,4 +1,4 @@
-# mcp-server
+# redhat-ai-tools/jira-mcp
 
 For use with Cursor to provide access to Jira.
 
