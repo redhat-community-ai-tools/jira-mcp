@@ -34,3 +34,7 @@ Example configuration file for Cursor (probably in `~/.cursor/mcp.json`):
    jira EC-1324 about"
 
 [rh-token-page]: https://issues.redhat.com/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
