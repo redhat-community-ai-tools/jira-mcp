@@ -1,4 +1,4 @@
-# jira_server.py
+#!/usr/bin/env python
 
 import os
 from dotenv import load_dotenv
