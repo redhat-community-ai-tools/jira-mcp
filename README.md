@@ -42,6 +42,57 @@ Example configuration file for Cursor, probably in `~/.cursor/mcp.json`:
 
 > **Note:** You do not need to manually run the container. Cursor will automatically start the MCP server when needed.
 
+## Available Tools
+
+This MCP server provides the following tools:
+
+### Issue Search
+- `get_jira` - Get details for a specific Jira issue by key.
+- `search_issues` - Search issues using JQL
+
+### Project Management
+- `list_projects` - List all projects
+- `get_project` - Get project details by key
+- `get_project_components` - Get components for a project
+- `get_project_versions` - Get versions for a project
+- `get_project_roles` - Get roles for a project
+- `get_project_permission_scheme` - Get permission scheme for a project
+- `get_project_issue_types` - Get issue types for a project
+
+### Board & Sprint Management
+- `list_boards` - List all boards
+- `get_board` - Get board details by ID
+- `list_sprints` - List sprints for a board
+- `get_sprint` - Get sprint details by ID
+- `get_issues_for_board` - Get issues for a board
+- `get_issues_for_sprint` - Get issues for a sprint
+
+### User Management
+- `search_users` - Search users by query
+- `get_user` - Get user details by account ID
+- `get_current_user` - Get current user info
+- `get_assignable_users_for_project` - Get assignable users for a project
+- `get_assignable_users_for_issue` - Get assignable users for an issue
+
+## Development Commands
+
+- `make build` - Build the Podman image
+- `make run` - Run the container (requires JIRA_API_TOKEN env var)
+- `make test` - Test the server
+- `make clean` - Clean up Podman images
+
+## Troubleshooting
+
+### Server Not Starting
+- Ensure Podman is running
+- Check that the JIRA_API_TOKEN is correct
+- Verify the Podman image was built successfully with `podman images | grep jira-mcp`
+
+### Connection Issues
+- Restart Cursor after configuration changes
+- Check Cursor's developer console for error messages
+- Verify the Jira URL is accessible from your network
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
