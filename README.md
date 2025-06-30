@@ -1,6 +1,6 @@
 # redhat-ai-tools/jira-mcp
 
-For use with Cursor to provide access to Jira.
+A containerized MCP server for Cursor to provide access to Jira.
 
 > [!IMPORTANT]
 > This project is experimental and was initially created as a learning exercise.
@@ -12,42 +12,35 @@ For use with Cursor to provide access to Jira.
 
 Example configuration file for Cursor, probably in `~/.cursor/mcp.json`:
 
-```json
-{
-  "mcpServers": {
-    "jira-mcp": {
-      "command": "/some/path/jira-mcp/server.sh",
-      "description": "A simple MCP server to query Jira issues"
-    }
-  }
-}
-```
+## Prerequisites
 
-## Getting started
+- **Podman** - Install with `sudo dnf install podman` (Fedora/RHEL) or `brew install podman` (macOS)
+- **Make** - Usually pre-installed on most systems
 
-* Run `make setup` to set up a python venv environment and install
-  the dependencies.
-* (Optional) Run `source .venv/bin/activate` to set the venv python
-  path in your terminal.
-* Go to your Jira profile page and create a personal access token, for
-  example [here][rh-token-page].
-* Copy `.env.example` to `.env`, add your token to that file, and update
-  the url as required.
-* Go to "Tools & Integrations" in the Cursor settings and paste in the JSON
-  from above. Adjust the command path as required.
-* If it's working you should see a green indicator and "1 tools enabled".
-* You should then be able to refer to Jiras in the Cursor AI pane, e.g.
-  "summarize the requirements for jira EC-1332".
 
-[rh-token-page]: https://issues.redhat.com/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens
+## Quick Start
 
-## Notes
+1. **Build the Podman Image:**
+   ```bash
+   make build
+   ```
+2. **Get Your Jira API Token:**
+   Go to [Red Hat Jira Personal Access Tokens](https://issues.redhat.com/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens) and create a new token.
+3. **Configure Cursor:**
+   Add this to your `~/.cursor/mcp.json`:
+   ```json
+   {
+     "mcpServers": {
+       "jira-mcp": {
+         "command": "podman",
+         "args": ["run", "--rm", "-i", "-e", "JIRA_URL=https://issues.redhat.com", "-e", "JIRA_API_TOKEN=${JIRA_API_TOKEN}", "jira-mcp:latest"],
+         "description": "A containerized MCP server to query Jira issues"
+       }
+     }
+   }
+   ```
 
-* The instructions above assume you want to use
-  [venv](https://docs.python.org/3/library/venv.html).
-  You can use system python if you prefer.
-  Do a `pip install -r requirements.txt` and adjust
-  `server.sh` as required.
+> **Note:** You do not need to manually run the container. Cursor will automatically start the MCP server when needed.
 
 ## License
 
