@@ -12,8 +12,13 @@ build:
 	@echo "🛠️ Building image"
 	podman build -t $(IMG) .
 
+# Notes:
+# - $(ENV_FILE) is expected to define JIRA_URL & JIRA_API_TOKEN.
+# - The --tty option is used here since we might run this in a
+#   terminal, but for the mcp.json version we don't use --tty.
+# - You can use Ctrl-D to quit nicely.
 run:
-	podman run -i --rm --env-file $(ENV_FILE) $(IMG)
+	@podman run -i --tty --rm --env-file $(ENV_FILE) $(IMG)
 
 clean:
 	podman rmi -i $(IMG)
