@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "jiraMcp": {
+      "command": "make",
+      "args": [
+        "-C",
+        "/path/to/jira-mcp"
+      ],
+      "description": "A containerized MCP server to query Jira issues"
+    }
+  }
+}
