@@ -23,10 +23,12 @@ which provides another way to access Red Hat Jira data.
   git clone git@github.com:redhat-ai-tools/jira-mcp.git
   cd jira-mcp
   ```
-2. **Build the image & configure Cursor**
+2. **Build the image & configure Cursor**<br>
+  This also creates a `~/.rh-jira-mcp.env` file like [this](example.env).
   ```bash
   make setup
   ```
+
 3. **Prepare a Jira token**
    * Go to [Red Hat Jira Personal Access Tokens](https://issues.redhat.com/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens) and create a token
    * Edit the `.rh-jira-mcp.env` file in your home directory and paste in the token
@@ -69,9 +71,9 @@ This MCP server provides the following tools:
 ## Development Commands
 
 - `make build` - Build the image
-- `make run` - Run the container (used by Cursor)
+- `make run` - Run the container
 - `make clean` - Clean up the built image
-- `make cursor-config` - Modify ~/.cursor/mcp.json to install this MCP Server
+- `make cursor-config` - Modify `~/.cursor/mcp.json` to install this MCP Server
 - `make setup` - Builds the image, configures Cursor, and creates `~/.rh-jira-mcp.env` if it doesn't exist
 
 ## Troubleshooting
@@ -80,8 +82,7 @@ This MCP server provides the following tools:
 - Confirm that `make run` works
 - Check that the JIRA_API_TOKEN is correct
 - Verify the image was built successfully with `podman images jira-mcp`
-- Go to the "Output" tab in Cursor's bottom pane, choose "MCP Logs" from the
-  drop-down select and examine the logs there.
+- Go to the "Output" tab in Cursor's bottom pane, choose "MCP Logs" from the drop-down select and examine the logs there
 
 ### Connection Issues
 - Restart Cursor after configuration changes
