@@ -4,6 +4,8 @@ _default: run
 SHELL := /bin/bash
 SCRIPT_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 IMG := localhost/jira-mcp:latest
+ENV_FILE := $(HOME)/.rh-jira-mcp.env
+
 .PHONY: build run clean test cursor-config setup
 
 build:
@@ -11,7 +13,7 @@ build:
 	podman build -t $(IMG) .
 
 run:
-	podman run -i --rm --env-file .env $(IMG)
+	podman run -i --rm --env-file $(ENV_FILE) $(IMG)
 
 clean:
 	podman rmi -i $(IMG)
@@ -23,12 +25,11 @@ MCP_JSON=$(HOME)/.cursor/mcp.json
 cursor-config:
 	@echo "🛠️ Modifying $(MCP_JSON)"
 	@yq -ojson '. *= load("example.mcp.json")' -i $(MCP_JSON)
-	@yq -ojson '.mcpServers.jiraMcp.args[1] = "$(SCRIPT_DIR)"' -i $(MCP_JSON)
 	@yq -ojson $(MCP_JSON)
 
 # Copy the example .env file only if it doesn't exist already
-.env:
+$(ENV_FILE):
 	@cp example.env $@
-	@echo "🛠️ Created .env file. Edit $@ to add your Jira token"
+	@echo "🛠️ Env file created. Edit $@ to add your Jira token"
 
-setup: build cursor-config .env
+setup: build cursor-config $(ENV_FILE)

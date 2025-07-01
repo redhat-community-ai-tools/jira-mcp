@@ -29,7 +29,7 @@ which provides another way to access Red Hat Jira data.
   ```
 3. **Prepare a Jira token**
    * Go to [Red Hat Jira Personal Access Tokens](https://issues.redhat.com/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens) and create a token
-   * Edit the `.env` file and paste it in
+   * Edit the `.rh-jira-mcp.env` file in your home directory and paste in the token
 
 To confirm it's working, run Cursor, go to Settings and click on "Tools &
 Integrations". Under MCP Tools you should see "jiraMcp" with 20 tools enabled.

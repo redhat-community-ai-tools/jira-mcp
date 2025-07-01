@@ -1,10 +1,14 @@
 {
   "mcpServers": {
     "jiraMcp": {
-      "command": "make",
+      "command": "podman",
       "args": [
-        "-C",
-        "/path/to/jira-mcp"
+        "run",
+        "-i",
+        "--rm",
+        "--env-file",
+        "~/.rh-jira-mcp.env",
+        "localhost/jira-mcp:latest"
       ],
       "description": "A containerized MCP server to query Jira issues"
     }
