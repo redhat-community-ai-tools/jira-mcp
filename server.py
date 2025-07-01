@@ -226,5 +226,4 @@ def get_issues_for_sprint(board_id: int, sprint_id: int, max_results: int = 10) 
 
 # ─── 5. Run the HTTP-based MCP server on port 8000 ───────────────────────────────
 if __name__ == "__main__":
-    print(f"Using JIRA_URL={JIRA_URL}")
     mcp.run()
