@@ -1,6 +1,6 @@
 # redhat-ai-tools/jira-mcp
 
-A containerized MCP server for Cursor to provide access to Jira.
+A containerized Python MCP server for Cursor to provide access to Jira.
 
 > [!IMPORTANT]
 > This project is experimental and was initially created as a learning exercise.
@@ -8,39 +8,31 @@ A containerized MCP server for Cursor to provide access to Jira.
 > such as [sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian),
 > and Atlassian's own [MCP Server](https://www.atlassian.com/platform/remote-mcp-server).
 
-## Cursor config
-
-Example configuration file for Cursor, probably in `~/.cursor/mcp.json`:
+See also [redhat-ai-tools/jira-mcp-snowflake](https://github.com/redhat-ai-tools/jira-mcp-snowflake)
+which provides another way to access Red Hat Jira data.
 
 ## Prerequisites
 
-- **Podman** - Install with `sudo dnf install podman` (Fedora/RHEL) or `brew install podman` (macOS)
-- **Make** - Usually pre-installed on most systems
-
+- **podman** - Install with `sudo dnf install podman` (Fedora/RHEL) or `brew install podman` (macOS)
+- **make** - Usually pre-installed on most systems
 
 ## Quick Start
 
-1. **Build the Podman Image:**
-   ```bash
-   make build
-   ```
-2. **Get Your Jira API Token:**
-   Go to [Red Hat Jira Personal Access Tokens](https://issues.redhat.com/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens) and create a new token.
-3. **Configure Cursor:**
-   Add this to your `~/.cursor/mcp.json`:
-   ```json
-   {
-     "mcpServers": {
-       "jira-mcp": {
-         "command": "podman",
-         "args": ["run", "--rm", "-i", "-e", "JIRA_URL=https://issues.redhat.com", "-e", "JIRA_API_TOKEN=${JIRA_API_TOKEN}", "jira-mcp:latest"],
-         "description": "A containerized MCP server to query Jira issues"
-       }
-     }
-   }
-   ```
+1. **Get the code**
+  ```bash
+  git clone git@github.com:redhat-ai-tools/jira-mcp.git
+  cd jira-mcp
+  ```
+2. **Build the image & configure Cursor**
+  ```bash
+  make setup
+  ```
+3. **Prepare a Jira token**
+   * Go to [Red Hat Jira Personal Access Tokens](https://issues.redhat.com/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens) and create a token
+   * Edit the `.rh-jira-mcp.env` file in your home directory and paste in the token
 
-> **Note:** You do not need to manually run the container. Cursor will automatically start the MCP server when needed.
+To confirm it's working, run Cursor, go to Settings and click on "Tools &
+Integrations". Under MCP Tools you should see "jiraMcp" with 20 tools enabled.
 
 ## Available Tools
 
@@ -76,17 +68,20 @@ This MCP server provides the following tools:
 
 ## Development Commands
 
-- `make build` - Build the Podman image
-- `make run` - Run the container (requires JIRA_API_TOKEN env var)
-- `make test` - Test the server
-- `make clean` - Clean up Podman images
+- `make build` - Build the image
+- `make run` - Run the container (used by Cursor)
+- `make clean` - Clean up the built image
+- `make cursor-config` - Modify ~/.cursor/mcp.json to install this MCP Server
+- `make setup` - Builds the image, configures Cursor, and creates `~/.rh-jira-mcp.env` if it doesn't exist
 
 ## Troubleshooting
 
 ### Server Not Starting
-- Ensure Podman is running
+- Confirm that `make run` works
 - Check that the JIRA_API_TOKEN is correct
-- Verify the Podman image was built successfully with `podman images | grep jira-mcp`
+- Verify the image was built successfully with `podman images jira-mcp`
+- Go to the "Output" tab in Cursor's bottom pane, choose "MCP Logs" from the
+  drop-down select and examine the logs there.
 
 ### Connection Issues
 - Restart Cursor after configuration changes
