@@ -8,6 +8,9 @@ A containerized Python MCP server for Cursor to provide access to Jira.
 > such as [sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian),
 > and Atlassian's own [MCP Server](https://www.atlassian.com/platform/remote-mcp-server).
 
+See also [redhat-ai-tools/jira-mcp-snowflake](https://github.com/redhat-ai-tools/jira-mcp-snowflake)
+which provides another way to access Red Hat Jira data.
+
 ## Prerequisites
 
 - **podman** - Install with `sudo dnf install podman` (Fedora/RHEL) or `brew install podman` (macOS)
