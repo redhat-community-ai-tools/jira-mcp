@@ -26,14 +26,18 @@ Example configuration file for Cursor, probably in `~/.cursor/mcp.json`:
    ```
 2. **Get Your Jira API Token:**
    Go to [Red Hat Jira Personal Access Tokens](https://issues.redhat.com/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens) and create a new token.
+
+3. **Create your .env file**
+   Copy the `.env.example` to `.env` and add your token to it.
+
 3. **Configure Cursor:**
    Add this to your `~/.cursor/mcp.json`:
    ```json
    {
      "mcpServers": {
        "jira-mcp": {
-         "command": "podman",
-         "args": ["run", "--rm", "-i", "-e", "JIRA_URL=https://issues.redhat.com", "-e", "JIRA_API_TOKEN=${JIRA_API_TOKEN}", "jira-mcp:latest"],
+         "command": "make",
+         "args": ["-C", "/path/to/jira-mcp"],
          "description": "A containerized MCP server to query Jira issues"
        }
      }
