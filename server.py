@@ -58,7 +58,23 @@ def search_issues(jql: str, max_results: int = 10) -> str:
     """Search issues using JQL."""
     try:
         issues = jira_client.search_issues(jql, maxResults=max_results)
-        return to_markdown([i.raw for i in issues])
+        # Extract only essential fields to avoid token limit issues
+        simplified_issues = []
+        for issue in issues:
+            simplified = {
+                'key': issue.key,
+                'summary': issue.fields.summary,
+                'status': issue.fields.status.name if issue.fields.status else None,
+                'assignee': issue.fields.assignee.displayName if issue.fields.assignee else None,
+                'reporter': issue.fields.reporter.displayName if issue.fields.reporter else None,
+                'priority': issue.fields.priority.name if issue.fields.priority else None,
+                'issuetype': issue.fields.issuetype.name if issue.fields.issuetype else None,
+                'created': issue.fields.created,
+                'updated': issue.fields.updated,
+                'description': issue.fields.description
+            }
+            simplified_issues.append(simplified)
+        return to_markdown(simplified_issues)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"JQL search failed: {e}")
 
