@@ -171,10 +171,10 @@ def get_assignable_users_for_issue(issue_key: str, query: str = "", max_results:
         raise HTTPException(status_code=400, detail=f"Failed to get assignable users: {e}")
 
 @mcp.tool()
-def list_boards(max_results: int = 10) -> str:
-    """List boards."""
+def list_boards(max_results: int = 10, project_key_or_id: str = None) -> str:
+    """List boards, optionally filtered by project."""
     try:
-        boards = jira_client.boards(maxResults=max_results)
+        boards = jira_client.boards(maxResults=max_results, projectKeyOrID=project_key_or_id)
         return to_markdown([b.raw for b in boards])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch boards: {e}")
