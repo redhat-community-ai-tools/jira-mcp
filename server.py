@@ -197,6 +197,15 @@ def get_sprint(sprint_id: int) -> str:
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to fetch sprint: {e}")
 
+@mcp.tool()
+def get_sprints_by_name(board_id: int, state: str = None) -> str:
+    """Get sprints by name for a board, optionally filtered by state."""
+    try:
+        sprints = jira_client.sprints_by_name(board_id, state=state)
+        return to_markdown(sprints)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch sprints by name: {e}")
+
 # ─── 5. Run the HTTP-based MCP server on port 8000 ───────────────────────────────
 if __name__ == "__main__":
     mcp.run()
