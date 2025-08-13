@@ -180,15 +180,6 @@ def list_boards(max_results: int = 10) -> str:
         raise HTTPException(status_code=500, detail=f"Failed to fetch boards: {e}")
 
 @mcp.tool()
-def get_board(board_id: int) -> str:
-    """Get board by ID."""
-    try:
-        board = jira_client.board(board_id)
-        return to_markdown(board.raw)
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Failed to fetch board: {e}")
-
-@mcp.tool()
 def list_sprints(board_id: int, max_results: int = 10) -> str:
     """List sprints for a board."""
     try:
@@ -205,24 +196,6 @@ def get_sprint(sprint_id: int) -> str:
         return to_markdown(sprint.raw)
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to fetch sprint: {e}")
-
-@mcp.tool()
-def get_issues_for_board(board_id: int, max_results: int = 10) -> str:
-    """Get issues for a board."""
-    try:
-        issues = jira_client.get_issues_for_board(board_id, maxResults=max_results)
-        return to_markdown([i.raw for i in issues])
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch issues for board: {e}")
-
-@mcp.tool()
-def get_issues_for_sprint(board_id: int, sprint_id: int, max_results: int = 10) -> str:
-    """Get issues for a sprint in a board."""
-    try:
-        issues = jira_client.get_all_issues_for_sprint_in_board(board_id, sprint_id, maxResults=max_results)
-        return to_markdown([i.raw for i in issues])
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch issues for sprint: {e}")
 
 # ─── 5. Run the HTTP-based MCP server on port 8000 ───────────────────────────────
 if __name__ == "__main__":
