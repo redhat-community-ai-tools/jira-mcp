@@ -54,7 +54,7 @@ def to_markdown(obj):
         return str(obj)
 
 @mcp.tool()
-def search_issues(jql: str, max_results: int = 10) -> str:
+def search_issues(jql: str, max_results: int = 100) -> str:
     """Search issues using JQL."""
     try:
         issues = jira_client.search_issues(jql, maxResults=max_results)
