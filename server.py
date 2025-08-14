@@ -54,11 +54,27 @@ def to_markdown(obj):
         return str(obj)
 
 @mcp.tool()
-def search_issues(jql: str, max_results: int = 10) -> str:
+def search_issues(jql: str, max_results: int = 100) -> str:
     """Search issues using JQL."""
     try:
         issues = jira_client.search_issues(jql, maxResults=max_results)
-        return to_markdown([i.raw for i in issues])
+        # Extract only essential fields to avoid token limit issues
+        simplified_issues = []
+        for issue in issues:
+            simplified = {
+                'key': issue.key,
+                'summary': issue.fields.summary,
+                'status': issue.fields.status.name if issue.fields.status else None,
+                'assignee': issue.fields.assignee.displayName if issue.fields.assignee else None,
+                'reporter': issue.fields.reporter.displayName if issue.fields.reporter else None,
+                'priority': issue.fields.priority.name if issue.fields.priority else None,
+                'issuetype': issue.fields.issuetype.name if issue.fields.issuetype else None,
+                'created': issue.fields.created,
+                'updated': issue.fields.updated,
+                'description': issue.fields.description
+            }
+            simplified_issues.append(simplified)
+        return to_markdown(simplified_issues)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"JQL search failed: {e}")
 
@@ -171,22 +187,13 @@ def get_assignable_users_for_issue(issue_key: str, query: str = "", max_results:
         raise HTTPException(status_code=400, detail=f"Failed to get assignable users: {e}")
 
 @mcp.tool()
-def list_boards(max_results: int = 10) -> str:
-    """List boards."""
+def list_boards(max_results: int = 10, project_key_or_id: str = None) -> str:
+    """List boards, optionally filtered by project."""
     try:
-        boards = jira_client.boards(maxResults=max_results)
+        boards = jira_client.boards(maxResults=max_results, projectKeyOrID=project_key_or_id)
         return to_markdown([b.raw for b in boards])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch boards: {e}")
-
-@mcp.tool()
-def get_board(board_id: int) -> str:
-    """Get board by ID."""
-    try:
-        board = jira_client.board(board_id)
-        return to_markdown(board.raw)
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Failed to fetch board: {e}")
 
 @mcp.tool()
 def list_sprints(board_id: int, max_results: int = 10) -> str:
@@ -207,22 +214,13 @@ def get_sprint(sprint_id: int) -> str:
         raise HTTPException(status_code=404, detail=f"Failed to fetch sprint: {e}")
 
 @mcp.tool()
-def get_issues_for_board(board_id: int, max_results: int = 10) -> str:
-    """Get issues for a board."""
+def get_sprints_by_name(board_id: int, state: str = None) -> str:
+    """Get sprints by name for a board, optionally filtered by state."""
     try:
-        issues = jira_client.get_issues_for_board(board_id, maxResults=max_results)
-        return to_markdown([i.raw for i in issues])
+        sprints = jira_client.sprints_by_name(board_id, state=state)
+        return to_markdown(sprints)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch issues for board: {e}")
-
-@mcp.tool()
-def get_issues_for_sprint(board_id: int, sprint_id: int, max_results: int = 10) -> str:
-    """Get issues for a sprint in a board."""
-    try:
-        issues = jira_client.get_all_issues_for_sprint_in_board(board_id, sprint_id, maxResults=max_results)
-        return to_markdown([i.raw for i in issues])
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch issues for sprint: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch sprints by name: {e}")
 
 # ─── 5. Run the HTTP-based MCP server on port 8000 ───────────────────────────────
 if __name__ == "__main__":
