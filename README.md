@@ -84,7 +84,10 @@ This MCP server provides the following tools:
 - Check that the JIRA_API_TOKEN is correct
 - Verify the image was built successfully with `podman images jira-mcp`
 - Go to the "Output" tab in Cursor's bottom pane, choose "MCP Logs" from the drop-down select and examine the logs there
-
+- (MacOS) jiraMcp shows up in Cursor tools section but shows no active tools:
+  - Edit args section of jiraMcp of your `mcp.json` file to include your full path to the `.rh-jira-mcp.env` file. 
+  - Example: `"~/.rh-jira-mcp.env",` to `"/Users/your_username/.rh-jira-mcp.env",`
+  
 ### Connection Issues
 - Restart Cursor after configuration changes
 - Check Cursor's developer console for error messages
