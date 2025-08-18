@@ -15,6 +15,7 @@ which provides another way to access Red Hat Jira data.
 
 - **podman** - Install with `sudo dnf install podman` (Fedora/RHEL) or `brew install podman` (macOS)
 - **make** - Usually pre-installed on most systems
+- **yq** - Install with `brew install yq` (macOS)
 
 ## Quick Start
 
