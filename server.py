@@ -279,6 +279,35 @@ def add_comment(issue_key: str, comment_body: str) -> str:
         raise HTTPException(status_code=400, detail=f"Failed to add comment to {issue_key}: {e}")
 
 @mcp.tool()
+def delete_comment(issue_key: str, comment_id: str) -> str:
+    """Delete a comment from a Jira issue."""
+    try:
+        comment = jira_client.comment(issue_key, comment_id)
+        comment.delete()
+        return f"Deleted comment {comment_id} from {issue_key}"
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to delete comment {comment_id} from {issue_key}: {e}")
+
+@mcp.tool()
+def get_issue_comments(issue_key: str) -> str:
+    """Get all comments for a Jira issue."""
+    try:
+        issue = jira_client.issue(issue_key)
+        comments = []
+        for comment in issue.fields.comment.comments:
+            comment_data = {
+                'id': comment.id,
+                'author': comment.author.displayName if comment.author else 'Unknown',
+                'body': comment.body,
+                'created': comment.created,
+                'updated': comment.updated if hasattr(comment, 'updated') else comment.created
+            }
+            comments.append(comment_data)
+        return to_markdown(comments)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to get comments for {issue_key}: {e}")
+
+@mcp.tool()
 def assign_issue(issue_key: str, assignee: str) -> str:
     """Assign a Jira issue to a user."""
     try:
