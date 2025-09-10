@@ -34,15 +34,35 @@ which provides another way to access Red Hat Jira data.
    * Edit the `.rh-jira-mcp.env` file in your home directory and paste in the token
 
 To confirm it's working, run Cursor, go to Settings and click on "Tools &
-Integrations". Under MCP Tools you should see "jiraMcp" with 20 tools enabled.
+Integrations". Under MCP Tools you should see "jiraMcp" with 29 tools enabled.
 
 ## Available Tools
 
 This MCP server provides the following tools:
 
-### Issue Search
+### Issue Search & Retrieval
 - `get_jira` - Get details for a specific Jira issue by key.
 - `search_issues` - Search issues using JQL
+
+### Issue Creation & Management
+- `create_issue` - Create a new Jira issue with summary, description, type, priority, and assignee
+- `update_issue` - Update an existing issue's summary, description, priority, or assignee
+- `delete_issue` - Delete a Jira issue (use with caution)
+
+### Issue Comments
+- `add_comment` - Add a comment to a Jira issue
+
+### Issue Assignment
+- `assign_issue` - Assign a Jira issue to a user
+- `unassign_issue` - Unassign a Jira issue
+
+### Issue Workflow & Status
+- `transition_issue` - Transition a Jira issue to a new status (e.g., "In Progress", "Done")
+- `get_issue_transitions` - Get available transitions for a Jira issue
+
+### Issue Labels
+- `add_issue_labels` - Add labels to a Jira issue
+- `remove_issue_labels` - Remove labels from a Jira issue
 
 ### Project Management
 - `list_projects` - List all projects
@@ -55,11 +75,9 @@ This MCP server provides the following tools:
 
 ### Board & Sprint Management
 - `list_boards` - List all boards
-- `get_board` - Get board details by ID
 - `list_sprints` - List sprints for a board
 - `get_sprint` - Get sprint details by ID
-- `get_issues_for_board` - Get issues for a board
-- `get_issues_for_sprint` - Get issues for a sprint
+- `get_sprints_by_name` - Get sprints by name for a board, optionally filtered by state
 
 ### User Management
 - `search_users` - Search users by query

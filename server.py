@@ -222,6 +222,155 @@ def get_sprints_by_name(board_id: int, state: str = None) -> str:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch sprints by name: {e}")
 
-# ─── 5. Run the HTTP-based MCP server on port 8000 ───────────────────────────────
+# ─── 5. Write Operations ───────────────────────────────────────────────────────
+
+@mcp.tool()
+def create_issue(project_key: str, summary: str, description: str = "", issue_type: str = "Task", priority: str = "Medium", assignee: str = None) -> str:
+    """Create a new Jira issue."""
+    try:
+        issue_dict = {
+            'project': {'key': project_key},
+            'summary': summary,
+            'description': description,
+            'issuetype': {'name': issue_type},
+            'priority': {'name': priority}
+        }
+        
+        if assignee:
+            issue_dict['assignee'] = {'name': assignee}
+        
+        new_issue = jira_client.create_issue(fields=issue_dict)
+        return f"Created issue {new_issue.key}: {summary}"
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to create issue: {e}")
+
+@mcp.tool()
+def update_issue(issue_key: str, summary: str = None, description: str = None, priority: str = None, assignee: str = None) -> str:
+    """Update an existing Jira issue."""
+    try:
+        issue = jira_client.issue(issue_key)
+        update_dict = {}
+        
+        if summary:
+            update_dict['summary'] = summary
+        if description:
+            update_dict['description'] = description
+        if priority:
+            update_dict['priority'] = {'name': priority}
+        if assignee:
+            update_dict['assignee'] = {'name': assignee}
+        
+        if update_dict:
+            issue.update(fields=update_dict)
+            return f"Updated issue {issue_key} successfully"
+        else:
+            return f"No updates provided for issue {issue_key}"
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to update issue {issue_key}: {e}")
+
+@mcp.tool()
+def add_comment(issue_key: str, comment_body: str) -> str:
+    """Add a comment to a Jira issue."""
+    try:
+        issue = jira_client.issue(issue_key)
+        comment = jira_client.add_comment(issue, comment_body)
+        return f"Added comment to {issue_key}: {comment.id}"
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to add comment to {issue_key}: {e}")
+
+@mcp.tool()
+def assign_issue(issue_key: str, assignee: str) -> str:
+    """Assign a Jira issue to a user."""
+    try:
+        issue = jira_client.issue(issue_key)
+        jira_client.assign_issue(issue, assignee)
+        return f"Assigned issue {issue_key} to {assignee}"
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to assign issue {issue_key}: {e}")
+
+@mcp.tool()
+def unassign_issue(issue_key: str) -> str:
+    """Unassign a Jira issue."""
+    try:
+        issue = jira_client.issue(issue_key)
+        jira_client.assign_issue(issue, None)
+        return f"Unassigned issue {issue_key}"
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to unassign issue {issue_key}: {e}")
+
+@mcp.tool()
+def transition_issue(issue_key: str, transition_name: str, comment: str = None) -> str:
+    """Transition a Jira issue to a new status."""
+    try:
+        issue = jira_client.issue(issue_key)
+        transitions = jira_client.transitions(issue)
+        
+        # Find the transition by name
+        transition_id = None
+        for trans in transitions:
+            if trans['name'].lower() == transition_name.lower():
+                transition_id = trans['id']
+                break
+        
+        if not transition_id:
+            available_transitions = [t['name'] for t in transitions]
+            return f"Transition '{transition_name}' not found. Available transitions: {', '.join(available_transitions)}"
+        
+        # Perform the transition
+        if comment:
+            jira_client.transition_issue(issue, transition_id, comment=comment)
+            return f"Transitioned issue {issue_key} to '{transition_name}' with comment"
+        else:
+            jira_client.transition_issue(issue, transition_id)
+            return f"Transitioned issue {issue_key} to '{transition_name}'"
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to transition issue {issue_key}: {e}")
+
+@mcp.tool()
+def get_issue_transitions(issue_key: str) -> str:
+    """Get available transitions for a Jira issue."""
+    try:
+        issue = jira_client.issue(issue_key)
+        transitions = jira_client.transitions(issue)
+        transition_list = [{'id': t['id'], 'name': t['name']} for t in transitions]
+        return to_markdown(transition_list)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to get transitions for {issue_key}: {e}")
+
+@mcp.tool()
+def delete_issue(issue_key: str) -> str:
+    """Delete a Jira issue (use with caution)."""
+    try:
+        issue = jira_client.issue(issue_key)
+        issue.delete()
+        return f"Deleted issue {issue_key}"
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to delete issue {issue_key}: {e}")
+
+@mcp.tool()
+def add_issue_labels(issue_key: str, labels: list) -> str:
+    """Add labels to a Jira issue."""
+    try:
+        issue = jira_client.issue(issue_key)
+        current_labels = list(issue.fields.labels)
+        new_labels = list(set(current_labels + labels))  # Remove duplicates
+        issue.update(fields={'labels': new_labels})
+        return f"Added labels {labels} to issue {issue_key}"
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to add labels to {issue_key}: {e}")
+
+@mcp.tool()
+def remove_issue_labels(issue_key: str, labels: list) -> str:
+    """Remove labels from a Jira issue."""
+    try:
+        issue = jira_client.issue(issue_key)
+        current_labels = list(issue.fields.labels)
+        new_labels = [label for label in current_labels if label not in labels]
+        issue.update(fields={'labels': new_labels})
+        return f"Removed labels {labels} from issue {issue_key}"
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to remove labels from {issue_key}: {e}")
+
+# ─── 6. Run the HTTP-based MCP server on port 8000 ───────────────────────────────
 if __name__ == "__main__":
     mcp.run()
