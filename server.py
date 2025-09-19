@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import argparse
 from dotenv import load_dotenv
 from jira import JIRA
 from fastmcp import FastMCP
@@ -400,6 +401,53 @@ def remove_issue_labels(issue_key: str, labels: list) -> str:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to remove labels from {issue_key}: {e}")
 
-# ─── 6. Run the HTTP-based MCP server on port 8000 ───────────────────────────────
+# ─── 6. Run the MCP server  ───────────────────────────────
+def parse_arguments():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Jira Context Server",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+
+Environment Variables:
+  JIRA_API_TOKEN: Your Jira API token.
+
+Examples:
+  python server.py                                # Run with stdio 
+  python server.py --transport streamable-http    # Streamable HTTP server mode
+  python server.py --transport sse                # SSE HTTP server mode (deprecated)
+  python server.py --transport sse --port 8080  # Custom port
+  python server.py --transport sse --host 0.0.0.0  # Bind to all interfaces
+
+  # With API token
+  JIRA_API_TOKEN=your_api_key_here python nps_mcp_server.py
+        """
+    )
+    
+    parser.add_argument(
+        "--transport", "-t",
+        choices=["stdio", "http", "sse"],
+        default="stdio",
+        help="Transport mode: stdio (default) or http (streamable HTTP-based server) or sse (deprecated HTTP-based server)"
+    )
+    
+    parser.add_argument(
+        "--host",
+        default="localhost", 
+        help="Host to bind to in HTTP mode (default: localhost)"
+    )
+    
+    parser.add_argument(
+        "--port", "-p",
+        type=int,
+        default=3000,
+        help="Port to bind to in HTTP mode (default: 3000)"
+    )
+    
+    return parser.parse_args()
+
 if __name__ == "__main__":
-    mcp.run()
+    args = parse_arguments()
+    mcp.run(transport=args.transport, host=args.host, port=args.port)
+
+

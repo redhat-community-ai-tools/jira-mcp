@@ -37,6 +37,21 @@ which provides another way to access Red Hat Jira data.
 To confirm it's working, run Cursor, go to Settings and click on "Tools &
 Integrations". Under MCP Tools you should see "jiraMcp" with 29 tools enabled.
 
+## Using with an HTTP-based MCP application
+
+If you want to use this MCP server with an application that communicates via HTTP, then you need to run the server with an HTTP-based transport mechanism.
+Here is an example of how to do this using Streamable HTTP, which is the current recommended http-based transport mechanism for MCP:
+
+```
+export $(grep -v '^#' ~/.rh-jira-mcp.env | xargs) && python server.py --transport http --port 3075
+```
+
+Here is an example of how to do this using SSE, which is a deprecated http-based transport mechanism (e.g., because you have an older MCP client application that depends on SSE):
+
+```
+export $(grep -v '^#' ~/.rh-jira-mcp.env | xargs) && python server.py --transport sse --port 3075
+```
+
 ## Available Tools
 
 This MCP server provides the following tools:
