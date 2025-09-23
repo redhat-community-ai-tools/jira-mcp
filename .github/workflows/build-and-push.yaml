@@ -1,0 +1,34 @@
+---
+name: Build and push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    container:
+      image: fedora:latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          dnf -y install podman skopeo
+
+      - name: Build
+        run: |
+          make build
+
+      - name: Quay login
+        run: |
+          podman login -u="${{ secrets.QUAY_PUSH_USER }}" -p="${{ secrets.QUAY_PUSH_PASSWORD }}" quay.io
+
+      - name: Push
+        run: |
+          make push
