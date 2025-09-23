@@ -7,7 +7,7 @@ IMG := localhost/jira-mcp:latest
 ENV_FILE := $(HOME)/.rh-jira-mcp.env
 EXAMPLE_MCP := example.mcp.json
 
-.PHONY: build run clean test cursor-config setup
+.PHONY: build push run clean test cursor-config setup
 
 build:
 	@echo "🛠️ Building image"
