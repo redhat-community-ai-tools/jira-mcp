@@ -19,7 +19,7 @@ LOCAL_IMG := localhost/jira-mcp:latest
 # from https://quay.io/repository/sbaird/jira-mcp?tab=tags
 IMG := $(PUBLIC_IMG)
 
-.PHONY: build run clean test cursor-config setup
+.PHONY: build push run clean test cursor-config setup
 
 build:
 	@echo "🛠️ Building image"
