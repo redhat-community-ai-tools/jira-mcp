@@ -8,6 +8,9 @@ from fastmcp import FastMCP
 from fastapi import HTTPException
 import json
 
+## Custom fields IDs
+QA_CONTACT_FID = "customfield_12315948"
+
 # ─── 1. Load environment variables ─────────────────────────────────────────────
 load_dotenv()
 
@@ -67,9 +70,11 @@ def search_issues(jql: str, max_results: int = 100) -> str:
                 'summary': issue.fields.summary,
                 'status': issue.fields.status.name if issue.fields.status else None,
                 'assignee': issue.fields.assignee.displayName if issue.fields.assignee else None,
+                'qa_contact': getattr(issue.fields, QA_CONTACT_FID).displayName if getattr(issue.fields, QA_CONTACT_FID) else None,
                 'reporter': issue.fields.reporter.displayName if issue.fields.reporter else None,
                 'priority': issue.fields.priority.name if issue.fields.priority else None,
                 'issuetype': issue.fields.issuetype.name if issue.fields.issuetype else None,
+                'fixVersion': issue.fields.fixVersions[0].name if issue.fields.fixVersions else None,
                 'created': issue.fields.created,
                 'updated': issue.fields.updated,
                 'description': issue.fields.description
