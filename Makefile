@@ -17,8 +17,8 @@ build:
 PUBLIC_IMG := quay.io/sbaird/jira-mcp
 push:
 	@echo "🛠️ Pushing to $(PUBLIC_IMG)"
-	@for tag in latest $(shell git rev-parse --short HEAD); do
-	  skopeo copy containers-storage:$(IMG) docker://$(PUBLIC_IMG):$$tag
+	@for tag in latest git-$(shell git rev-parse --short HEAD); do \
+	  skopeo copy containers-storage:$(IMG) docker://$(PUBLIC_IMG):$$tag; \
 	done
 
 # Notes:
