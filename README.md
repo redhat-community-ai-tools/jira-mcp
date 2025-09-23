@@ -34,8 +34,16 @@ which provides another way to access Red Hat Jira data.
    * Go to [Red Hat Jira Personal Access Tokens](https://issues.redhat.com/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens) and create a token
    * Edit the `.rh-jira-mcp.env` file in your home directory and paste in the token
 
-To confirm it's working, run Cursor, go to Settings and click on "Tools &
-Integrations". Under MCP Tools you should see "jiraMcp" with 29 tools enabled.
+4. **Decide whether to enable write operations**
+
+Enabling your MCP server to make edits to Jira can be very useful, but can also cause a lot of problems if you are not careful in how you use the MCP tools.
+By default, the server has write operations turned off.
+If you want to turn it on, edit the `.rh-jira-mcp.env` file in your home directory to set `JIRA_ENABLE_WRITE=true`.
+
+5. **Check if it is working in Cursor**
+
+To confirm it's working, run Cursor, go to Settings and click on "Tools & Integrations". Under MCP Tools you should see "jiraMcp" with 20 tools enabled if 
+`JIRA_ENABLE_WRITE=false` (the default value) or 30 tools enabled if `JIRA_ENABLE_WRITE=true`.
 
 ## Using with an HTTP-based MCP application
 
@@ -66,7 +74,9 @@ This MCP server provides the following tools:
 - `delete_issue` - Delete a Jira issue (use with caution)
 
 ### Issue Comments
+- `get_issue_comments` - Get all comments for a Jira issue
 - `add_comment` - Add a comment to a Jira issue
+- `delete_comment` - Delete a comment from a Jira issue
 
 ### Issue Assignment
 - `assign_issue` - Assign a Jira issue to a user
