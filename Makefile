@@ -13,6 +13,14 @@ build:
 	@echo "🛠️ Building image"
 	podman build -t $(IMG) .
 
+# TODO: Find a better home for this
+PUBLIC_IMG := quay.io/sbaird/jira-mcp
+push:
+	@echo "🛠️ Pushing to $(PUBLIC_IMG)"
+	@for tag in latest $(shell git rev-parse --short HEAD); do
+	  skopeo copy containers-storage:$(IMG) docker://$(PUBLIC_IMG):$$tag
+	done
+
 # Notes:
 # - $(ENV_FILE) is expected to define JIRA_URL & JIRA_API_TOKEN.
 # - The --tty option is used here since we might run this in a
