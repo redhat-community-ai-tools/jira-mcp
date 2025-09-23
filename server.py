@@ -7,12 +7,15 @@ from jira import JIRA
 from fastmcp import FastMCP
 from fastapi import HTTPException
 import json
+import logging
 
 # ─── 1. Load environment variables ─────────────────────────────────────────────
 load_dotenv()
 
 JIRA_URL       = os.getenv("JIRA_URL")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
+JIRA_ENABLE_WRITE_OPERATIONS_STRING = os.getenv("JIRA_ENABLE_WRITE_OPERATIONS")
+ENABLE_WRITE = JIRA_ENABLE_WRITE_OPERATIONS_STRING.lower() == "true" if JIRA_ENABLE_WRITE_OPERATIONS_STRING else False
 
 if not all([JIRA_URL, JIRA_API_TOKEN]):
     raise RuntimeError("Missing JIRA_URL or JIRA_API_TOKEN environment variables")
@@ -225,7 +228,7 @@ def get_sprints_by_name(board_id: int, state: str = None) -> str:
 
 # ─── 5. Write Operations ───────────────────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(enabled=ENABLE_WRITE)
 def create_issue(project_key: str, summary: str, description: str = "", issue_type: str = "Task", priority: str = "Medium", assignee: str = None) -> str:
     """Create a new Jira issue."""
     try:
@@ -245,7 +248,7 @@ def create_issue(project_key: str, summary: str, description: str = "", issue_ty
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to create issue: {e}")
 
-@mcp.tool()
+@mcp.tool(enabled=ENABLE_WRITE)
 def update_issue(issue_key: str, summary: str = None, description: str = None, priority: str = None, assignee: str = None) -> str:
     """Update an existing Jira issue."""
     try:
@@ -269,7 +272,7 @@ def update_issue(issue_key: str, summary: str = None, description: str = None, p
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to update issue {issue_key}: {e}")
 
-@mcp.tool()
+@mcp.tool(enabled=ENABLE_WRITE)
 def add_comment(issue_key: str, comment_body: str) -> str:
     """Add a comment to a Jira issue."""
     try:
@@ -279,7 +282,7 @@ def add_comment(issue_key: str, comment_body: str) -> str:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to add comment to {issue_key}: {e}")
 
-@mcp.tool()
+@mcp.tool(enabled=ENABLE_WRITE)
 def delete_comment(issue_key: str, comment_id: str) -> str:
     """Delete a comment from a Jira issue."""
     try:
@@ -308,7 +311,7 @@ def get_issue_comments(issue_key: str) -> str:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to get comments for {issue_key}: {e}")
 
-@mcp.tool()
+@mcp.tool(enabled=ENABLE_WRITE)
 def assign_issue(issue_key: str, assignee: str) -> str:
     """Assign a Jira issue to a user."""
     try:
@@ -318,7 +321,7 @@ def assign_issue(issue_key: str, assignee: str) -> str:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to assign issue {issue_key}: {e}")
 
-@mcp.tool()
+@mcp.tool(enabled=ENABLE_WRITE)
 def unassign_issue(issue_key: str) -> str:
     """Unassign a Jira issue."""
     try:
@@ -328,7 +331,7 @@ def unassign_issue(issue_key: str) -> str:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to unassign issue {issue_key}: {e}")
 
-@mcp.tool()
+@mcp.tool(enabled=ENABLE_WRITE)
 def transition_issue(issue_key: str, transition_name: str, comment: str = None) -> str:
     """Transition a Jira issue to a new status."""
     try:
@@ -367,7 +370,7 @@ def get_issue_transitions(issue_key: str) -> str:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to get transitions for {issue_key}: {e}")
 
-@mcp.tool()
+@mcp.tool(enabled=ENABLE_WRITE)
 def delete_issue(issue_key: str) -> str:
     """Delete a Jira issue (use with caution)."""
     try:
@@ -377,7 +380,7 @@ def delete_issue(issue_key: str) -> str:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to delete issue {issue_key}: {e}")
 
-@mcp.tool()
+@mcp.tool(enabled=ENABLE_WRITE)
 def add_issue_labels(issue_key: str, labels: list) -> str:
     """Add labels to a Jira issue."""
     try:
@@ -389,7 +392,7 @@ def add_issue_labels(issue_key: str, labels: list) -> str:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to add labels to {issue_key}: {e}")
 
-@mcp.tool()
+@mcp.tool(enabled=ENABLE_WRITE)
 def remove_issue_labels(issue_key: str, labels: list) -> str:
     """Remove labels from a Jira issue."""
     try:
@@ -401,7 +404,7 @@ def remove_issue_labels(issue_key: str, labels: list) -> str:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to remove labels from {issue_key}: {e}")
 
-# ─── 6. Run the MCP server  ───────────────────────────────
+# ─── 6. Utility functions ─────────────────────────────────────────────────────
 def parse_arguments():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
@@ -413,14 +416,14 @@ Environment Variables:
   JIRA_API_TOKEN: Your Jira API token.
 
 Examples:
-  python server.py                                # Run with stdio 
-  python server.py --transport streamable-http    # Streamable HTTP server mode
-  python server.py --transport sse                # SSE HTTP server mode (deprecated)
-  python server.py --transport sse --port 8080  # Custom port
+  python server.py                                 # Run with stdio 
+  python server.py --transport http                # Streamable HTTP server mode
+  python server.py --transport sse                 # SSE HTTP server mode (deprecated)
+  python server.py --transport sse --port 8080     # Custom port
   python server.py --transport sse --host 0.0.0.0  # Bind to all interfaces
 
   # With API token
-  JIRA_API_TOKEN=your_api_key_here python nps_mcp_server.py
+  JIRA_API_TOKEN=your_api_key_here python server.py
         """
     )
     
@@ -446,8 +449,18 @@ Examples:
     
     return parser.parse_args()
 
+
+# ─── 7. Run the MCP server  ───────────────────────────────
+
 if __name__ == "__main__":
     args = parse_arguments()
+    print(args)
+    
+    if ENABLE_WRITE:
+        print("Running in read/write mode")
+    else:
+        print("Running in read-only mode - write operations disabled")
+    
     if args.transport == "stdio":
         mcp.run(transport=args.transport)
     else:
