@@ -454,7 +454,6 @@ Examples:
 
 if __name__ == "__main__":
     args = parse_arguments()
-    print(args)
     
     if args.transport == "stdio":
         mcp.run(transport=args.transport)
