@@ -10,16 +10,9 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
-    container:
-      image: fedora:latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Install deps
-        run: |
-          dnf -y install make podman skopeo
 
       - name: Build
         run: |
