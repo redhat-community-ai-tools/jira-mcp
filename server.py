@@ -14,8 +14,8 @@ load_dotenv()
 
 JIRA_URL       = os.getenv("JIRA_URL")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
-JIRA_ENABLE_WRITE_OPERATIONS_STRING = os.getenv("JIRA_ENABLE_WRITE_OPERATIONS")
-ENABLE_WRITE = JIRA_ENABLE_WRITE_OPERATIONS_STRING.lower() == "true" if JIRA_ENABLE_WRITE_OPERATIONS_STRING else False
+JIRA_ENABLE_WRITE_OPERATIONS_STRING = os.getenv("JIRA_ENABLE_WRITE", "false")
+ENABLE_WRITE = JIRA_ENABLE_WRITE_OPERATIONS_STRING.lower() == "true"
 
 if not all([JIRA_URL, JIRA_API_TOKEN]):
     raise RuntimeError("Missing JIRA_URL or JIRA_API_TOKEN environment variables")
@@ -455,11 +455,6 @@ Examples:
 if __name__ == "__main__":
     args = parse_arguments()
     print(args)
-    
-    if ENABLE_WRITE:
-        print("Running in read/write mode")
-    else:
-        print("Running in read-only mode - write operations disabled")
     
     if args.transport == "stdio":
         mcp.run(transport=args.transport)

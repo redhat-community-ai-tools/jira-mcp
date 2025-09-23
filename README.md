@@ -38,12 +38,12 @@ which provides another way to access Red Hat Jira data.
 
 Enabling your MCP server to make edits to Jira can be very useful, but can also cause a lot of problems if you are not careful in how you use the MCP tools.
 By default, the server has write operations turned off.
-If you want to turn it on, edit the `.rh-jira-mcp.env` file in your home directory to set `JIRA_ENABLE_WRITE_OPERATIONS=true`.
+If you want to turn it on, edit the `.rh-jira-mcp.env` file in your home directory to set `JIRA_ENABLE_WRITE=true`.
 
 5. **Check if it is working in Cursor**
 
 To confirm it's working, run Cursor, go to Settings and click on "Tools & Integrations". Under MCP Tools you should see "jiraMcp" with 20 tools enabled if 
-`JIRA_ENABLE_WRITE_OPERATIONS=false` (the default value) or 30 tools enabled if `JIRA_ENABLE_WRITE_OPERATIONS=true`.
+`JIRA_ENABLE_WRITE=false` (the default value) or 30 tools enabled if `JIRA_ENABLE_WRITE=true`.
 
 ## Using with an HTTP-based MCP application
 
