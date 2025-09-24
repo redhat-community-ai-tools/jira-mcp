@@ -3,22 +3,30 @@ _default: run
 
 SHELL := /bin/bash
 SCRIPT_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
-IMG := localhost/jira-mcp:latest
 ENV_FILE := $(HOME)/.rh-jira-mcp.env
 EXAMPLE_MCP := example.mcp.json
 
-.PHONY: build run clean test cursor-config setup
-
-build:
-	@echo "🛠️ Building image"
-	podman build -t $(IMG) .
-
 # TODO: Find a better home for this
 PUBLIC_IMG := quay.io/sbaird/jira-mcp
+LOCAL_IMG := localhost/jira-mcp:latest
+
+IMG := $(LOCAL_IMG)
+
+# To use the pre-built main branch image from https://quay.io/repository/sbaird/jira-mcp?tab=tags
+# instead of your locally built image, uncomment this and re-run `make cursor-config`.
+#IMG := $(PUBLIC_IMG)
+
+.PHONY: build
+build:
+	@echo "🛠️ Building image"
+	podman build -t $(LOCAL_IMG) .
+
+# This requires a push credential for quay.io/sbaird/jira-mcp
+.PHONY: push
 push:
 	@echo "🛠️ Pushing to $(PUBLIC_IMG)"
 	@for tag in latest git-$(shell git rev-parse --short HEAD); do \
-	  podman tag $(IMG) $(PUBLIC_IMG):$$tag; \
+	  podman tag $(LOCAL_IMG) $(PUBLIC_IMG):$$tag; \
 	  podman push $(PUBLIC_IMG):$$tag; \
 	done
 
@@ -27,9 +35,11 @@ push:
 # - The --tty option is used here since we might run this in a
 #   terminal, but for the mcp.json version we don't use --tty.
 # - You can use Ctrl-D to quit nicely.
+.PHONY: run
 run:
 	@podman run -i --tty --rm --env-file $(ENV_FILE) $(IMG)
 
+.PHONY: clean
 clean:
 	podman rmi -i $(IMG)
 
@@ -43,6 +53,7 @@ IMG_ARG_IDX = $(shell yq '.mcpServers.jiraMcp.args|length - 1' $(EXAMPLE_MCP))
 # configure Cursor by adding or updating an entry in the ~/.cursor/mcp.json
 # file. Beware it might overwrite your customizations.
 MCP_JSON=$(HOME)/.cursor/mcp.json
+.PHONY: cursor-config
 cursor-config:
 	@echo "🛠️ Modifying $(MCP_JSON)"
 	@#
@@ -63,4 +74,30 @@ $(ENV_FILE):
 	@cp example.env $@
 	@echo "🛠️ Env file created. Edit $@ to add your Jira token"
 
+.PHONY: setup
 setup: build cursor-config $(ENV_FILE)
+
+VENV=.venv
+$(VENV):
+	@# black is not in requirements.txt since we don't want it in the image
+	@python -mvenv $@ && \
+	  source $@/bin/activate && \
+	  pip install --upgrade pip && \
+	  pip install -r requirements.txt && \
+	  pip install black
+	@echo "Now do this:"
+	@echo "  source $@/bin/activate"
+
+.PHONY: venv-setup
+venv-setup: $(VENV)
+
+.PHONY: fmt
+fmt:
+	@black *.py
+
+.PHONY: fmt-check
+fmt-check:
+	@black --check *.py
+
+.PHONY: ci
+ci: fmt-check
