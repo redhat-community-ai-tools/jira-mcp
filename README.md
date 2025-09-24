@@ -11,13 +11,43 @@ A containerized Python MCP server for Cursor to provide access to Jira.
 See also [redhat-ai-tools/jira-mcp-snowflake](https://github.com/redhat-ai-tools/jira-mcp-snowflake)
 which provides another way to access Red Hat Jira data.
 
-## Prerequisites
-
-- **podman** - Install with `sudo dnf install podman` (Fedora/RHEL) or `brew install podman` (macOS)
-- **make** - Usually pre-installed on most systems
-- **yq** - Install with `brew install yq` (macOS)
-
 ## Quick Start
+
+1. **Prepare a Jira token**
+   * Go to [Red Hat Jira Personal Access Tokens](https://issues.redhat.com/secure/ViewProfile.jspa?selectedTab=com.atlassian.pats.pats-plugin:jira-user-personal-access-tokens) and create a token
+   * Create a .env file similar to [example.env](example.env)
+
+2. **Configure Cursor**
+   * In Cursor go to "Settings", "Tools & Integrations", and click "New MCP Server"
+   * Paste in the following JSON, (or insert just the `jiraMcp` object under the `mcpServers` key).
+   * Update `"/path/to/your/dotenv/file.env"` to point to the file from step 1.
+   * Save
+
+```
+{
+  "mcpServers": {
+    "jiraMcp": {
+      "command": "podman",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--env-file",
+        "/path/to/your/dotenv/file.env",
+        "quay.io/sbaird/jira-mcp:latest"
+      ],
+      "description": "A containerized MCP server to query Jira issues"
+    }
+  }
+}
+```
+
+## Quick Start (for developers)
+
+0. **Prerequisites**
+    - **podman** - Install with `sudo dnf install podman` (Fedora/RHEL) or `brew install podman` (macOS)
+    - **yq** - Install with `sudo dnf install yq` (Fedora/RHEL) or `brew install yq` (macOS)
+    - **make** - Usually pre-installed on most systems
 
 1. **Get the code**
   ```bash
