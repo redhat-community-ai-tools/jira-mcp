@@ -3,22 +3,30 @@ _default: run
 
 SHELL := /bin/bash
 SCRIPT_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
-IMG := localhost/jira-mcp:latest
 ENV_FILE := $(HOME)/.rh-jira-mcp.env
 EXAMPLE_MCP := example.mcp.json
+
+# TODO: Find a better home for this
+PUBLIC_IMG := quay.io/sbaird/jira-mcp
+LOCAL_IMG := localhost/jira-mcp:latest
+
+IMG := $(LOCAL_IMG)
+
+# To use the pre-built main branch image from https://quay.io/repository/sbaird/jira-mcp?tab=tags
+# instead of your locally built image, uncomment this and re-run `make cursor-config`.
+#IMG := $(PUBLIC_IMG)
 
 .PHONY: build push run clean test cursor-config setup
 
 build:
 	@echo "🛠️ Building image"
-	podman build -t $(IMG) .
+	podman build -t $(LOCAL_IMG) .
 
-# TODO: Find a better home for this
-PUBLIC_IMG := quay.io/sbaird/jira-mcp
+# This requires a push credential for quay.io/sbaird/jira-mcp
 push:
 	@echo "🛠️ Pushing to $(PUBLIC_IMG)"
 	@for tag in latest git-$(shell git rev-parse --short HEAD); do \
-	  podman tag $(IMG) $(PUBLIC_IMG):$$tag; \
+	  podman tag $(LOCAL_IMG) $(PUBLIC_IMG):$$tag; \
 	  podman push $(PUBLIC_IMG):$$tag; \
 	done
 
