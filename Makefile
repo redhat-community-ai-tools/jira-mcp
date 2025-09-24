@@ -16,7 +16,7 @@ IMG := $(LOCAL_IMG)
 # instead of your locally built image, uncomment this and re-run `make cursor-config`.
 #IMG := $(PUBLIC_IMG)
 
-.PHONY: build push run clean test cursor-config setup venv-setup
+.PHONY: build push run clean test cursor-config setup venv-setup fmt fmt-check ci
 
 build:
 	@echo "🛠️ Building image"
@@ -77,7 +77,19 @@ VENV=.venv
 $(VENV):
 	@python -mvenv $@
 	@source $@/bin/activate && pip install -r requirements.txt
+	@#
+	@# (Not in requirements.txt since we don't want it in the image)
+	@source $@/bin/activate && pip install black
+	@#
 	@echo "Now do this:"
 	@echo "  source $@/bin/activate"
 
 venv-setup: $(VENV)
+
+fmt:
+	@black *.py
+
+fmt-check:
+	@black --check *.py
+
+ci: fmt-check
