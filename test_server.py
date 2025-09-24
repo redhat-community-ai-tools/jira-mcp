@@ -6,6 +6,10 @@ from unittest.mock import Mock, patch, MagicMock
 from fastapi import HTTPException
 import json
 
+# Set up required environment variables before importing server module
+os.environ["JIRA_URL"] = "https://test.example.com"
+os.environ["JIRA_API_TOKEN"] = "test-token"
+
 # Mock JIRA client creation before importing server module
 with patch("jira.JIRA"):
     # Import the server module
