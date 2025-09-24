@@ -24,8 +24,8 @@ build:
 # This requires a push credential for quay.io/sbaird/jira-mcp
 .PHONY: push
 push:
-	@echo "🛠️ Pushing to $(PUBLIC_IMG)"
 	@for tag in latest git-$(shell git rev-parse --short HEAD); do \
+	  echo "🛠️ Pushing to $(PUBLIC_IMG):$$tag"; \
 	  podman tag $(LOCAL_IMG) $(PUBLIC_IMG):$$tag; \
 	  podman push $(PUBLIC_IMG):$$tag; \
 	done
