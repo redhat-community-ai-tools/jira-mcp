@@ -79,12 +79,12 @@ setup: build cursor-config $(ENV_FILE)
 
 VENV=.venv
 $(VENV):
-	@python -mvenv $@
-	@source $@/bin/activate && pip install -r requirements.txt
-	@#
-	@# (Not in requirements.txt since we don't want it in the image)
-	@source $@/bin/activate && pip install black
-	@#
+	@# black is not in requirements.txt since we don't want it in the image
+	@python -mvenv $@ && \
+	  source $@/bin/activate && \
+	  pip install --upgrade pip && \
+	  pip install -r requirements.txt && \
+	  pip install black
 	@echo "Now do this:"
 	@echo "  source $@/bin/activate"
 
