@@ -101,11 +101,11 @@ fmt-check:
 
 .PHONY: test
 test:
-	@JIRA_URL=https://test.example.com JIRA_API_TOKEN=test-token python -m pytest -v
+	@python -m pytest -v
 
 .PHONY: quiet-test
 quiet-test:
-	@JIRA_URL=https://test.example.com JIRA_API_TOKEN=test-token python -m pytest
+	@python -m pytest
 
 .PHONY: ci
 ci: quiet-test fmt-check
