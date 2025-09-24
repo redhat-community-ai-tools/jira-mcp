@@ -244,10 +244,10 @@ def create_issue(project_key: str, summary: str, description: str = "", issue_ty
             'issuetype': {'name': issue_type},
             'priority': {'name': priority}
         }
-        
+
         if assignee:
             issue_dict['assignee'] = {'name': assignee}
-        
+
         new_issue = jira_client.create_issue(fields=issue_dict)
         return f"Created issue {new_issue.key}: {summary}"
     except Exception as e:
@@ -259,7 +259,7 @@ def update_issue(issue_key: str, summary: str = None, description: str = None, p
     try:
         issue = jira_client.issue(issue_key)
         update_dict = {}
-        
+
         if summary:
             update_dict['summary'] = summary
         if description:
@@ -268,7 +268,7 @@ def update_issue(issue_key: str, summary: str = None, description: str = None, p
             update_dict['priority'] = {'name': priority}
         if assignee:
             update_dict['assignee'] = {'name': assignee}
-        
+
         if update_dict:
             issue.update(fields=update_dict)
             return f"Updated issue {issue_key} successfully"
@@ -342,18 +342,18 @@ def transition_issue(issue_key: str, transition_name: str, comment: str = None) 
     try:
         issue = jira_client.issue(issue_key)
         transitions = jira_client.transitions(issue)
-        
+
         # Find the transition by name
         transition_id = None
         for trans in transitions:
             if trans['name'].lower() == transition_name.lower():
                 transition_id = trans['id']
                 break
-        
+
         if not transition_id:
             available_transitions = [t['name'] for t in transitions]
             return f"Transition '{transition_name}' not found. Available transitions: {', '.join(available_transitions)}"
-        
+
         # Perform the transition
         if comment:
             jira_client.transition_issue(issue, transition_id, comment=comment)
@@ -421,7 +421,7 @@ Environment Variables:
   JIRA_API_TOKEN: Your Jira API token.
 
 Examples:
-  python server.py                                 # Run with stdio 
+  python server.py                                 # Run with stdio
   python server.py --transport http                # Streamable HTTP server mode
   python server.py --transport sse                 # SSE HTTP server mode (deprecated)
   python server.py --transport sse --port 8080     # Custom port
@@ -431,27 +431,27 @@ Examples:
   JIRA_API_TOKEN=your_api_key_here python server.py
         """
     )
-    
+
     parser.add_argument(
         "--transport", "-t",
         choices=["stdio", "http", "sse"],
         default="stdio",
         help="Transport mode: stdio (default) or http (streamable HTTP-based server) or sse (deprecated HTTP-based server)"
     )
-    
+
     parser.add_argument(
         "--host",
-        default="localhost", 
+        default="localhost",
         help="Host to bind to in HTTP mode (default: localhost)"
     )
-    
+
     parser.add_argument(
         "--port", "-p",
         type=int,
         default=3000,
         help="Port to bind to in HTTP mode (default: 3000)"
     )
-    
+
     return parser.parse_args()
 
 
@@ -459,7 +459,7 @@ Examples:
 
 if __name__ == "__main__":
     args = parse_arguments()
-    
+
     if args.transport == "stdio":
         mcp.run(transport=args.transport)
     else:

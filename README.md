@@ -72,7 +72,7 @@ If you want to turn it on, edit the `.rh-jira-mcp.env` file in your home directo
 
 5. **Check if it is working in Cursor**
 
-To confirm it's working, run Cursor, go to Settings and click on "Tools & Integrations". Under MCP Tools you should see "jiraMcp" with 20 tools enabled if 
+To confirm it's working, run Cursor, go to Settings and click on "Tools & Integrations". Under MCP Tools you should see "jiraMcp" with 20 tools enabled if
 `JIRA_ENABLE_WRITE=false` (the default value) or 30 tools enabled if `JIRA_ENABLE_WRITE=true`.
 
 ## Using with an HTTP-based MCP application

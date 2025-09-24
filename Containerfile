@@ -11,4 +11,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Entrypoint
-CMD ["python", "server.py"] 
+CMD ["python", "server.py"]
