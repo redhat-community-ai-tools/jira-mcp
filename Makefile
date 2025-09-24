@@ -99,5 +99,13 @@ fmt:
 fmt-check:
 	@black --check *.py
 
+.PHONY: test
+test:
+	@JIRA_URL=https://test.example.com JIRA_API_TOKEN=test-token python -m pytest -v
+
+.PHONY: quiet-test
+quiet-test:
+	@JIRA_URL=https://test.example.com JIRA_API_TOKEN=test-token python -m pytest
+
 .PHONY: ci
-ci: fmt-check
+ci: quiet-test fmt-check
