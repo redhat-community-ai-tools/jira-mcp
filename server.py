@@ -2,6 +2,7 @@
 
 import os
 import argparse
+import types
 from dotenv import load_dotenv
 from jira import JIRA
 from fastmcp import FastMCP
@@ -57,8 +58,8 @@ def to_markdown(obj):
         return "```json\n" + json.dumps(obj, indent=2) + "\n```"
     elif hasattr(obj, "raw"):
         return "```json\n" + json.dumps(obj.raw, indent=2) + "\n```"
-    elif isinstance(obj, list):
-        return "\n".join([to_markdown(o) for o in obj])
+    elif isinstance(obj, list) or isinstance(obj, types.GeneratorType):
+        return "\n".join((to_markdown(o) for o in obj))
     else:
         return str(obj)
 
@@ -90,7 +91,7 @@ def search_issues(jql: str, max_results: int = 100) -> str:
 
     try:
         issues = jira_client.search_issues(jql, maxResults=max_results)
-        return to_markdown([simplify_issue(issue) for issue in issues])
+        return to_markdown((simplify_issue(issue) for issue in issues))
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"JQL search failed: {e}")
 
@@ -363,7 +364,7 @@ def get_issue_comments(issue_key: str) -> str:
 
     try:
         issue = jira_client.issue(issue_key)
-        return to_markdown([simplify_comment(c) for c in issue.fields.comment.comments])
+        return to_markdown((simplify_comment(c) for c in issue.fields.comment.comments))
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to get comments for {issue_key}: {e}")
 
