@@ -66,33 +66,31 @@ def to_markdown(obj):
 @mcp.tool()
 def search_issues(jql: str, max_results: int = 100) -> str:
     """Search issues using JQL."""
+
+    def simplify_issue(issue):
+        """Extract only essential fields to avoid token limit issues"""
+        return {
+            "key": issue.key,
+            "summary": issue.fields.summary,
+            "status": issue.fields.status.name if issue.fields.status else None,
+            "assignee": (issue.fields.assignee.displayName if issue.fields.assignee else None),
+            "qa_contact": (
+                qa_contact.displayName
+                if (qa_contact := getattr(issue.fields, QA_CONTACT_FID, None))
+                else None
+            ),
+            "reporter": (issue.fields.reporter.displayName if issue.fields.reporter else None),
+            "priority": (issue.fields.priority.name if issue.fields.priority else None),
+            "issuetype": (issue.fields.issuetype.name if issue.fields.issuetype else None),
+            "fixVersion": (issue.fields.fixVersions[0].name if issue.fields.fixVersions else None),
+            "created": issue.fields.created,
+            "updated": issue.fields.updated,
+            "description": issue.fields.description,
+        }
+
     try:
         issues = jira_client.search_issues(jql, maxResults=max_results)
-        # Extract only essential fields to avoid token limit issues
-        simplified_issues = []
-        for issue in issues:
-            simplified = {
-                "key": issue.key,
-                "summary": issue.fields.summary,
-                "status": issue.fields.status.name if issue.fields.status else None,
-                "assignee": (issue.fields.assignee.displayName if issue.fields.assignee else None),
-                "qa_contact": (
-                    qa_contact.displayName
-                    if (qa_contact := getattr(issue.fields, QA_CONTACT_FID, None))
-                    else None
-                ),
-                "reporter": (issue.fields.reporter.displayName if issue.fields.reporter else None),
-                "priority": (issue.fields.priority.name if issue.fields.priority else None),
-                "issuetype": (issue.fields.issuetype.name if issue.fields.issuetype else None),
-                "fixVersion": (
-                    issue.fields.fixVersions[0].name if issue.fields.fixVersions else None
-                ),
-                "created": issue.fields.created,
-                "updated": issue.fields.updated,
-                "description": issue.fields.description,
-            }
-            simplified_issues.append(simplified)
-        return to_markdown(simplified_issues)
+        return to_markdown([simplify_issue(issue) for issue in issues])
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"JQL search failed: {e}")
 
@@ -353,19 +351,19 @@ def delete_comment(issue_key: str, comment_id: str) -> str:
 @mcp.tool()
 def get_issue_comments(issue_key: str) -> str:
     """Get all comments for a Jira issue."""
+
+    def simplify_comment(comment):
+        return {
+            "id": comment.id,
+            "author": comment.author.displayName if comment.author else "Unknown",
+            "body": comment.body,
+            "created": comment.created,
+            "updated": (comment.updated if hasattr(comment, "updated") else comment.created),
+        }
+
     try:
         issue = jira_client.issue(issue_key)
-        comments = []
-        for comment in issue.fields.comment.comments:
-            comment_data = {
-                "id": comment.id,
-                "author": comment.author.displayName if comment.author else "Unknown",
-                "body": comment.body,
-                "created": comment.created,
-                "updated": (comment.updated if hasattr(comment, "updated") else comment.created),
-            }
-            comments.append(comment_data)
-        return to_markdown(comments)
+        return to_markdown([simplify_comment(c) for c in issue.fields.comment.comments])
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to get comments for {issue_key}: {e}")
 
