@@ -77,8 +77,8 @@ def search_issues(jql: str, max_results: int = 100) -> str:
                 "status": issue.fields.status.name if issue.fields.status else None,
                 "assignee": (issue.fields.assignee.displayName if issue.fields.assignee else None),
                 "qa_contact": (
-                    getattr(issue.fields, QA_CONTACT_FID).displayName
-                    if getattr(issue.fields, QA_CONTACT_FID)
+                    qa_contact.displayName
+                    if (qa_contact := getattr(issue.fields, QA_CONTACT_FID, None))
                     else None
                 ),
                 "reporter": (issue.fields.reporter.displayName if issue.fields.reporter else None),
