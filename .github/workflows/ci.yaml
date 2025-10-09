@@ -1,0 +1,68 @@
+---
+name: CI
+
+on:
+  pull_request:
+    branches:
+    - main
+
+  push:
+    branches:
+    - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+        cache: pip
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip --quiet
+        pip install -r requirements.txt --quiet
+        pip install black --quiet
+
+    - name: Run tests
+      run: |
+        make test
+
+    - name: Check formatting
+      run: |
+        make fmt-check
+
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    # Only if the tests passed
+    needs: test
+
+    # Only on push to main branch
+    if: |
+      github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Build
+      run: |
+        make build
+
+    - name: Quay login
+      run: |
+        podman login \
+          --username "${{ secrets.QUAY_PUSH_USER }}" \
+          --password "${{ secrets.QUAY_PUSH_PASSWORD }}" \
+          quay.io
+
+    - name: Push
+      run: |
+        make push
