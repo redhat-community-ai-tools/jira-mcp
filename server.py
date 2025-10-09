@@ -2,14 +2,12 @@
 
 import os
 import argparse
-from re import L
 from dotenv import load_dotenv
 from jira import JIRA
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_http_headers
 from fastapi import HTTPException
 import json
-import logging
 
 ## Custom fields IDs
 QA_CONTACT_FID = "customfield_12315948"
@@ -22,23 +20,34 @@ JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
 JIRA_ENABLE_WRITE_OPERATIONS_STRING = os.getenv("JIRA_ENABLE_WRITE", "false")
 ENABLE_WRITE = JIRA_ENABLE_WRITE_OPERATIONS_STRING.lower() == "true"
 
+jira_client = JIRA(server=JIRA_URL, token_auth=JIRA_API_TOKEN)
+
 # ─── 2. Create a Jira client ───────────────────────────────────────────────────
 #    Uses token_auth (API token) for authentication.
 
 def get_jira_client(headers: dict[str, str]):
-    global global_jira_client
-    if global_jira_client:
-        # This is set in __main__ if running in stdio mode.
-        return global_jira_client
+    """
+    Get a JIRA client instance. 
+    
+    If a global jira_client exists (stdio mode), use it.
+    Otherwise, create a new client using the authorization header (server mode).
+    """
+    global jira_client
+    
+    # If we have a global client (stdio mode with env token), use it
+    if jira_client is not None:
+        return jira_client
 
+    # Server mode: extract token from authorization header
     auth_header = headers.get("authorization", headers.get("Authorization"))
     if auth_header:
-        s = auth_header.split(" ")
-        if len(s) != 2:
-            raise RuntimeError("Invalid Authorization header")
-        token = s[1]
+        parts = auth_header.split(" ")
+        if len(parts) != 2:
+            raise RuntimeError("Invalid Authorization header format. Expected: 'Bearer <token>'")
+        token = parts[1]
         return JIRA(server=JIRA_URL, token_auth=token)
-    raise RuntimeError("No access token is available")
+    
+    raise RuntimeError("No access token available. Provide Authorization header with Bearer token.")
 
 # ─── 3. Instantiate the MCP server ─────────────────────────────────────────────
 mcp = FastMCP("Jira Context Server")
@@ -216,7 +225,7 @@ def get_assignable_users_for_project(
 ) -> str:
     """Get assignable users for a project."""
     try:
-        users = jira_client.search_assignable_users_for_projects(
+        users = get_jira_client(get_http_headers()).search_assignable_users_for_projects(
             query, project_key, maxResults=max_results
         )
         return to_markdown([u.raw for u in users])
@@ -228,7 +237,7 @@ def get_assignable_users_for_project(
 def get_assignable_users_for_issue(issue_key: str, query: str = "", max_results: int = 10) -> str:
     """Get assignable users for an issue."""
     try:
-        users = jira_client.search_assignable_users_for_issues(
+        users = get_jira_client(get_http_headers()).search_assignable_users_for_issues(
             query, issueKey=issue_key, maxResults=max_results
         )
         return to_markdown([u.raw for u in users])
@@ -301,7 +310,7 @@ def create_issue(
         if assignee:
             issue_dict["assignee"] = {"name": assignee}
 
-        new_issue = jira_client.create_issue(fields=issue_dict)
+        new_issue = get_jira_client(get_http_headers()).create_issue(fields=issue_dict)
         return f"Created issue {new_issue.key}: {summary}"
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to create issue: {e}")
@@ -409,8 +418,8 @@ def unassign_issue(issue_key: str) -> str:
 def transition_issue(issue_key: str, transition_name: str, comment: str = None) -> str:
     """Transition a Jira issue to a new status."""
     try:
-        issue = jira_client.issue(issue_key)
-        transitions = jira_client.transitions(issue)
+        issue = get_jira_client(get_http_headers()).issue(issue_key)
+        transitions = get_jira_client(get_http_headers()).transitions(issue)
 
         # Find the transition by name
         transition_id = None
@@ -438,8 +447,8 @@ def transition_issue(issue_key: str, transition_name: str, comment: str = None) 
 def get_issue_transitions(issue_key: str) -> str:
     """Get available transitions for a Jira issue."""
     try:
-        issue = jira_client.issue(issue_key)
-        transitions = jira_client.transitions(issue)
+        issue = get_jira_client(get_http_headers()).issue(issue_key)
+        transitions = get_jira_client(get_http_headers()).transitions(issue)
         transition_list = [{"id": t["id"], "name": t["name"]} for t in transitions]
         return to_markdown(transition_list)
     except Exception as e:
@@ -537,13 +546,11 @@ Examples:
 # ─── 7. Run the MCP server  ───────────────────────────────
 
 if __name__ == "__main__":
-    global global_jira_client
     args = parse_arguments()
 
     if args.transport == "stdio":
         if not all([JIRA_URL, JIRA_API_TOKEN]):
             raise RuntimeError("Missing JIRA_URL or JIRA_API_TOKEN environment variables")
-        global_jira_client = JIRA(server=JIRA_URL, token_auth=JIRA_API_TOKEN)
         mcp.run(transport=args.transport)
     else:
         if not JIRA_URL:
@@ -552,5 +559,5 @@ if __name__ == "__main__":
         # This is more secure because each caller providers their own access token instead of having one
         # shared token that everyone who can access the server can use.
         JIRA_API_TOKEN = None
-        global_jira_client = None
+        jira_client = None
         mcp.run(transport=args.transport, host=args.host, port=args.port)
