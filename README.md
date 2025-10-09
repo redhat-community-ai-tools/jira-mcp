@@ -90,6 +90,30 @@ Here is an example of how to do this using SSE, which is a deprecated http-based
 export $(grep -v '^#' ~/.rh-jira-mcp.env | xargs) && python server.py --transport sse --port 3075
 ```
 
+For either Streamable HTTP or SSE, the JIRA_API_KEY in your environment is ignored (and not neeed).  This is an important security feature, because otherwise anyone who
+had access to the HTTP service would have access to the account information for whoever configured and ran that server.
+Instead, calling applications must send in their own Jira token as a Bearer token.  Here is an example of how to do that using Llama Stack:
+
+```python
+from llama_stack_client import LlamaStackClient
+
+client = LlamaStackClient(base_url=LLAMA_STACK_URL)
+mcp_llama_stack_client_response = client.responses.create(
+    model=LLAMA_STACK_MODEL_ID,
+    input="Tell me about RHAISTRAT-24.",
+    tools=[
+        {
+            "type": "mcp",
+            "server_url": JIRA_MCP_URL,
+            "server_label": "Jira_tools",            
+            "headers": {
+                "Authorization": f"Bearer {JIRA_API_TOKEN}"
+            }
+        }
+    ]
+)
+```
+
 ## Available Tools
 
 This MCP server provides the following tools:
