@@ -25,15 +25,16 @@ jira_client = JIRA(server=JIRA_URL, token_auth=JIRA_API_TOKEN)
 # ─── 2. Create a Jira client ───────────────────────────────────────────────────
 #    Uses token_auth (API token) for authentication.
 
+
 def get_jira_client(headers: dict[str, str]):
     """
-    Get a JIRA client instance. 
-    
+    Get a JIRA client instance.
+
     If a global jira_client exists (stdio mode), use it.
     Otherwise, create a new client using the authorization header (server mode).
     """
     global jira_client
-    
+
     # If we have a global client (stdio mode with env token), use it
     if jira_client is not None:
         return jira_client
@@ -46,8 +47,9 @@ def get_jira_client(headers: dict[str, str]):
             raise RuntimeError("Invalid Authorization header format. Expected: 'Bearer <token>'")
         token = parts[1]
         return JIRA(server=JIRA_URL, token_auth=token)
-    
+
     raise RuntimeError("No access token available. Provide Authorization header with Bearer token.")
+
 
 # ─── 3. Instantiate the MCP server ─────────────────────────────────────────────
 mcp = FastMCP("Jira Context Server")
@@ -249,7 +251,9 @@ def get_assignable_users_for_issue(issue_key: str, query: str = "", max_results:
 def list_boards(max_results: int = 10, project_key_or_id: str = None) -> str:
     """List boards, optionally filtered by project."""
     try:
-        boards = get_jira_client(get_http_headers()).boards(maxResults=max_results, projectKeyOrID=project_key_or_id)
+        boards = get_jira_client(get_http_headers()).boards(
+            maxResults=max_results, projectKeyOrID=project_key_or_id
+        )
         return to_markdown([b.raw for b in boards])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch boards: {e}")
@@ -434,7 +438,9 @@ def transition_issue(issue_key: str, transition_name: str, comment: str = None) 
 
         # Perform the transition
         if comment:
-            get_jira_client(get_http_headers()).transition_issue(issue, transition_id, comment=comment)
+            get_jira_client(get_http_headers()).transition_issue(
+                issue, transition_id, comment=comment
+            )
             return f"Transitioned issue {issue_key} to '{transition_name}' with comment"
         else:
             get_jira_client(get_http_headers()).transition_issue(issue, transition_id)
@@ -542,6 +548,7 @@ Examples:
     )
 
     return parser.parse_args()
+
 
 # ─── 7. Run the MCP server  ───────────────────────────────
 
