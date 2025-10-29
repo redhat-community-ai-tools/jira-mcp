@@ -57,18 +57,31 @@ mcp = FastMCP("Jira Context Server")
 
 
 # ─── 4. Register the get_jira tool ─────────────────────────────────────────────
+def _get_jira(issue_key: str) -> str:
+    try:
+        return get_jira_client(get_http_headers()).issue(issue_key)
+    except Exception as e:
+        # If the JIRA client raises an error (e.g. issue not found),
+        # wrap it in an HTTPException so MCP/Client sees a 4xx/5xx.
+        raise HTTPException(status_code=404, detail=f"Failed to fetch Jira issue {issue_key}: {e}")
+
+
+@mcp.tool()
+def get_jira_raw(issue_key: str) -> str:
+    """
+    Fetch the Jira issue identified by 'issue_key' using get_jira_client,
+    then return a row JSON representing all details about the Jira issue.
+    """
+    return to_markdown(_get_jira(issue_key))
+
+
 @mcp.tool()
 def get_jira(issue_key: str) -> str:
     """
     Fetch the Jira issue identified by 'issue_key' then
     return a Markdown string: "# ISSUE-KEY: summary\n\ndescription"
     """
-    try:
-        issue = get_jira_client(get_http_headers()).issue(issue_key)
-    except Exception as e:
-        # If the JIRA client raises an error (e.g. issue not found),
-        # wrap it in an HTTPException so MCP/Client sees a 4xx/5xx.
-        raise HTTPException(status_code=404, detail=f"Failed to fetch Jira issue {issue_key}: {e}")
+    issue = _get_jira(issue_key)
 
     # Extract summary & description fields
     summary = issue.fields.summary or ""
@@ -79,11 +92,11 @@ def get_jira(issue_key: str) -> str:
 
 def to_markdown(obj):
     if isinstance(obj, dict):
-        return "```json\n" + json.dumps(obj, indent=2) + "\n```"
+        return "```json\n" + json.dumps(obj, indent=2, sort_keys=True) + "\n```"
     elif hasattr(obj, "raw"):
-        return "```json\n" + json.dumps(obj.raw, indent=2) + "\n```"
+        return "```json\n" + json.dumps(obj.raw, indent=2, sort_keys=True) + "\n```"
     elif isinstance(obj, list) or isinstance(obj, types.GeneratorType):
-        return "\n".join((to_markdown(o) for o in obj))
+        return "\n".join([to_markdown(o) for o in obj])
     else:
         return str(obj)
 

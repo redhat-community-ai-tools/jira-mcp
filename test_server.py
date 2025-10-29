@@ -57,6 +57,16 @@ class MockJiraIssue:
         self.update = MagicMock()
         self.delete = MagicMock()
 
+        # Raw JSON, extremely simplified
+        self.raw = {
+          "key": key,
+          "fields": {
+            "description": description,
+            "summary": summary,
+          }
+        }
+
+
 
 class MockJiraProject:
     """Mock Jira project object"""
@@ -145,6 +155,15 @@ class TestGetJira:
 
         assert exc_info.value.status_code == 404
         assert "Failed to fetch Jira issue NONEXISTENT-123" in str(exc_info.value.detail)
+
+    def test_get_jira_raw(self, mock_jira_client, sample_issue):
+        mock_jira_client.issue.return_value = sample_issue
+
+        result = server.get_jira_raw.fn("TEST-123")
+
+        expected_data = {"key": sample_issue.key, "fields": {"description": sample_issue.fields.description, "summary": sample_issue.fields.summary}}
+        assert result == "```json\n" + json.dumps(expected_data, indent=2, sort_keys=True) + "\n```"
+        mock_jira_client.issue.assert_called_once_with("TEST-123")
 
 
 class TestSearchIssues:
