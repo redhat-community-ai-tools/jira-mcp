@@ -78,10 +78,15 @@ def get_jira_raw(issue_key: str) -> str:
 @mcp.tool()
 def get_jira(issue_key: str, extra_fields: list = []) -> str:
     """
-    Fetch the Jira issue identified by 'issue_key' then
-    return a Markdown string: "# ISSUE-KEY: summary\n\ndescription".
-    If 'extra_fields=["key1","key2"]' were provided, they will be added to the returned
-    string: "# ISSUE: summary\n\ndescription\n\nkey1 = value1\nkey2 = value2\n..."
+    Retrieve detailed information about a specific Jira issue in Markdown format.
+
+    Use this tool when you need to read the summary and description of a single issue.
+    By default, it returns the summary and description. Additional fields can be
+    requested via the 'extra_fields' parameter.
+
+    Args:
+        issue_key: The Jira issue key (e.g., 'TEST-123').
+        extra_fields: Optional list of additional Jira field names to include (e.g., ['priority', 'status', 'created']).
     """
     issue = _get_jira(issue_key)
 
@@ -113,8 +118,18 @@ def to_markdown(obj):
 
 @mcp.tool()
 def search_issues(jql: str, max_results: int = 100, extra_fields: list = []) -> str:
-    """Search issues using JQL.
-    You can also provide 'extra_fields' parameter with a list of additional fields to return."""
+    """
+    Search for Jira issues using Jira Query Language (JQL).
+
+    Use this tool to find issues matching specific criteria (e.g., project, status,
+    assignee, or keywords). It returns a list of issues with their core fields:
+    key, summary, status, assignee, reporter, priority, issuetype, fixVersion, etc.
+
+    Args:
+        jql: A valid Jira Query Language string (e.g., 'project = "PROJ" AND status = "Open"').
+        max_results: Maximum number of issues to return (default is 100).
+        extra_fields: Optional list of additional Jira field names to include in each result.
+    """
 
     def simplify_issue(issue, extra_fields):
         """Extract only essential fields to avoid token limit issues"""
