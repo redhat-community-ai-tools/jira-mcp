@@ -338,8 +338,20 @@ def create_issue(
     issue_type: str = "Task",
     priority: str = "Medium",
     assignee: str = None,
+    extra_fields: dict = {},
 ) -> str:
-    """Create a new Jira issue."""
+    """
+    Create a new Jira issue.
+
+    Args:
+        project_key: The project key (e.g., 'TEST').
+        summary: The issue summary.
+        description: The issue description.
+        issue_type: The issue type (e.g., 'Task', 'Bug').
+        priority: The issue priority (e.g., 'Medium', 'High').
+        assignee: The username of the assignee.
+        extra_fields: Dictionary of additional fields to set (e.g., {'customfield_123': 'value', 'labels': ['label1']}).
+    """
     try:
         issue_dict = {
             "project": {"key": project_key},
@@ -351,6 +363,10 @@ def create_issue(
 
         if assignee:
             issue_dict["assignee"] = {"name": assignee}
+
+        # Merge extra fields
+        if extra_fields:
+            issue_dict.update(extra_fields)
 
         new_issue = get_jira_client(get_http_headers()).create_issue(fields=issue_dict)
         return f"Created issue {new_issue.key}: {summary}"

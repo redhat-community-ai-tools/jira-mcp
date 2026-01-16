@@ -347,6 +347,31 @@ class TestWriteOperations:
         assert call_args["assignee"]["name"] == "john.doe"
 
     @patch("server.ENABLE_WRITE", True)
+    def test_create_issue_with_extra_fields(self, mock_jira_client):
+        new_issue = MockJiraIssue("TEST-457", "Extra Fields Issue")
+        mock_jira_client.create_issue.return_value = new_issue
+
+        extra_fields = {
+            "customfield_123": "value",
+            "labels": ["label1", "label2"],
+        }
+
+        result = server.create_issue.fn(
+            project_key="TEST",
+            summary="Extra Fields Issue",
+            extra_fields=extra_fields,
+        )
+
+        assert "Created issue TEST-457" in result
+        mock_jira_client.create_issue.assert_called_once()
+
+        call_args = mock_jira_client.create_issue.call_args[1]["fields"]
+        assert call_args["project"]["key"] == "TEST"
+        assert call_args["summary"] == "Extra Fields Issue"
+        assert call_args["customfield_123"] == "value"
+        assert call_args["labels"] == ["label1", "label2"]
+
+    @patch("server.ENABLE_WRITE", True)
     def test_update_issue_success(self, mock_jira_client, sample_issue):
         mock_jira_client.issue.return_value = sample_issue
 
