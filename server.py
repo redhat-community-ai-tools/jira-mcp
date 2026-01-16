@@ -80,8 +80,8 @@ def get_jira(issue_key: str, extra_fields: list = []) -> str:
     """
     Fetch the Jira issue identified by 'issue_key' then
     return a Markdown string: "# ISSUE-KEY: summary\n\ndescription".
-    If 'extra_fields' were provided, they will be added to the returned
-    string: "# ISSUE: summary\n\ndescription\n\nkey1 = value1\n..."
+    If 'extra_fields=["key1","key2"]' were provided, they will be added to the returned
+    string: "# ISSUE: summary\n\ndescription\n\nkey1 = value1\nkey2 = value2\n..."
     """
     issue = _get_jira(issue_key)
 
@@ -91,7 +91,7 @@ def get_jira(issue_key: str, extra_fields: list = []) -> str:
 
     output = f"# {issue_key}: {summary}\n\n{description}"
 
-    # If extra fields were requested, add the to the output as well
+    # If extra fields were requested, add them to the output as well
     if extra_fields:
         output += "\n"
         for k in extra_fields:

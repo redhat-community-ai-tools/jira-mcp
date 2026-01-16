@@ -158,12 +158,12 @@ class TestGetJira:
 
         assert result == "# TEST-123: \n\n"
 
-    def test_get_jira_extra(self, mock_jira_client, sample_issue):
+    def test_get_jira_extra_not_found(self, mock_jira_client, sample_issue):
         mock_jira_client.issue.return_value = sample_issue
 
         result = server.get_jira.fn("TEST-123", ["does_not_exist"])
 
-        assert result.startswith("# TEST-123: Test Issue\n\nThis is a test issue\n\ndoes_not_exist = ")
+        assert result.startswith("# TEST-123: Test Issue\n\nThis is a test issue\n\ndoes_not_exist = None")
         mock_jira_client.issue.assert_called_once_with("TEST-123")
 
     def test_get_jira_not_found(self, mock_jira_client):
