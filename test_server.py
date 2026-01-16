@@ -20,7 +20,11 @@ class MockJiraIssue:
 
     def __init__(self, key, summary="Test Summary", description="Test Description", **kwargs):
         self.key = key
-        self.fields = MagicMock()
+
+        class Fields:
+            pass
+
+        self.fields = Fields()
         self.fields.summary = summary
         self.fields.description = description
 
@@ -62,12 +66,12 @@ class MockJiraIssue:
 
         # Raw JSON, extremely simplified
         self.raw = {
-          "key": key,
-          "fields": {
-            "description": description,
-            "summary": summary,
-            "customfield_10000000": self.fields.customfield_10000000,
-          }
+            "key": key,
+            "fields": {
+                "description": description,
+                "summary": summary,
+                "customfield_10000000": self.fields.customfield_10000000,
+            },
         }
 
 
@@ -147,7 +151,10 @@ class TestGetJira:
 
         result = server.get_jira.fn("TEST-123", ["created", "updated"])
 
-        assert result == "# TEST-123: Test Issue\n\nThis is a test issue\n\ncreated = 2023-01-01T00:00:00.000+0000\nupdated = 2023-01-01T00:00:00.000+0000"
+        assert (
+            result
+            == "# TEST-123: Test Issue\n\nThis is a test issue\n\ncreated = 2023-01-01T00:00:00.000+0000\nupdated = 2023-01-01T00:00:00.000+0000"
+        )
         mock_jira_client.issue.assert_called_once_with("TEST-123")
 
     def test_get_jira_missing_fields(self, mock_jira_client):
@@ -163,7 +170,9 @@ class TestGetJira:
 
         result = server.get_jira.fn("TEST-123", ["does_not_exist"])
 
-        assert result.startswith("# TEST-123: Test Issue\n\nThis is a test issue\n\ndoes_not_exist = None")
+        assert result.startswith(
+            "# TEST-123: Test Issue\n\nThis is a test issue\n\ndoes_not_exist = None"
+        )
         mock_jira_client.issue.assert_called_once_with("TEST-123")
 
     def test_get_jira_not_found(self, mock_jira_client):
@@ -180,7 +189,14 @@ class TestGetJira:
 
         result = server.get_jira_raw.fn("TEST-123")
 
-        expected_data = {"key": sample_issue.key, "fields": {"description": sample_issue.fields.description, "summary": sample_issue.fields.summary, "customfield_10000000": 1}}
+        expected_data = {
+            "key": sample_issue.key,
+            "fields": {
+                "description": sample_issue.fields.description,
+                "summary": sample_issue.fields.summary,
+                "customfield_10000000": 1,
+            },
+        }
         assert result == "```json\n" + json.dumps(expected_data, indent=2, sort_keys=True) + "\n```"
         mock_jira_client.issue.assert_called_once_with("TEST-123")
 
@@ -211,7 +227,9 @@ class TestSearchIssues:
         ]
         mock_jira_client.search_issues.return_value = issues
 
-        result = server.search_issues.fn("project = TEST", max_results=50, extra_fields=["customfield_10000000"])
+        result = server.search_issues.fn(
+            "project = TEST", max_results=50, extra_fields=["customfield_10000000"]
+        )
 
         assert "TEST-1" in result
         assert "TEST-2" in result

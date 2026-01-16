@@ -135,9 +135,7 @@ def search_issues(jql: str, max_results: int = 100, extra_fields: list = []) -> 
             "created": issue.fields.created,
             "updated": issue.fields.updated,
             "description": issue.fields.description,
-        } | {
-            k: getattr(issue.fields, k, None) for k in extra_fields
-        }
+        } | {k: getattr(issue.fields, k, None) for k in extra_fields}
 
     try:
         issues = get_jira_client(get_http_headers()).search_issues(jql, maxResults=max_results)
