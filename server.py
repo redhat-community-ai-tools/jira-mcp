@@ -11,7 +11,7 @@ from fastmcp.server.dependencies import get_http_headers
 from fastapi import HTTPException
 import json
 
-## Custom fields IDs
+# Custom fields IDs
 QA_CONTACT_FID = "customfield_12315948"
 
 # ─── 1. Load environment variables ─────────────────────────────────────────────
