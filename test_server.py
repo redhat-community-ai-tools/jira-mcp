@@ -611,7 +611,18 @@ class TestBoardsAndSprints:
 
         assert "Sprint 1" in result
         assert "Sprint 2" in result
-        mock_jira_client.sprints.assert_called_once_with(123, maxResults=10)
+        mock_jira_client.sprints.assert_called_once_with(123, maxResults=10, state=None)
+
+    def test_list_sprints_with_state(self, mock_jira_client):
+        sprints = [
+            MagicMock(raw={"id": 1, "name": "Active Sprint", "state": "active"}),
+        ]
+        mock_jira_client.sprints.return_value = sprints
+
+        result = server.list_sprints.fn(board_id=123, max_results=10, state="active")
+
+        assert "Active Sprint" in result
+        mock_jira_client.sprints.assert_called_once_with(123, maxResults=10, state="active")
 
     def test_get_sprint_success(self, mock_jira_client):
         sprint = MagicMock(raw={"id": 456, "name": "Test Sprint", "state": "active"})
