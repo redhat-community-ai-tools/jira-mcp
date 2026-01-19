@@ -3,6 +3,7 @@
 import os
 import argparse
 import types
+from typing import Literal
 from dotenv import load_dotenv
 from jira import JIRA
 from fastmcp import FastMCP
@@ -298,10 +299,14 @@ def list_boards(max_results: int = 10, project_key_or_id: str = None) -> str:
 
 
 @mcp.tool()
-def list_sprints(board_id: int, max_results: int = 10) -> str:
+def list_sprints(
+    board_id: int,
+    max_results: int = 10,
+    state: None | Literal["future"] | Literal["active"] | Literal["closed"] = None,
+) -> str:
     """List sprints for a board."""
     try:
-        sprints = get_jira_client(get_http_headers()).sprints(board_id, maxResults=max_results)
+        sprints = get_jira_client(get_http_headers()).sprints(board_id, maxResults=max_results, state=state)
         return to_markdown([s.raw for s in sprints])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch sprints: {e}")
