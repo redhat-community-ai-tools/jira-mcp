@@ -336,8 +336,8 @@ def create_issue(
     summary: str,
     description: str = "",
     issue_type: str = "Task",
-    priority: str = None,
-    assignee: str = None,
+    priority: str | None = None,
+    assignee: str | None = None,
     extra_fields: dict = {},
 ) -> str:
     """
@@ -347,8 +347,8 @@ def create_issue(
         project_key: The project key (e.g., 'TEST').
         summary: The issue summary.
         description: The issue description.
-        issue_type: The issue type (e.g., 'Task', 'Bug').
-        priority: The issue priority (e.g., 'Medium', 'High').
+        issue_type: The issue type (e.g., 'Epic', 'Task', 'Bug').
+        priority: The issue priority (depends on project, e.g., 'Medium' or 'Normal').
         assignee: The username of the assignee.
         extra_fields: Dictionary of additional fields to set (e.g., {'customfield_123': 'value', 'labels': ['label1']}).
     """
@@ -358,6 +358,7 @@ def create_issue(
             "summary": summary,
             "description": description,
             "issuetype": {"name": issue_type},
+            "priority": {"name": "Undefined"},
         }
 
         if assignee:
