@@ -136,7 +136,17 @@ def search_issues(jql: str, max_results: int = 100, extra_fields: list | None = 
 
     def simplify_issue(issue, extra_fields):
         """Extract only essential fields to avoid token limit issues"""
-        return {
+
+        def get_field_value(field):
+            if field is None:
+                return None
+            if hasattr(field, "name"):
+                return field.name
+            if isinstance(field, list):
+                return [get_field_value(item) for item in field]
+            return field
+
+        base_fields = {
             "key": issue.key,
             "summary": issue.fields.summary,
             "status": issue.fields.status.name if issue.fields.status else None,
@@ -153,7 +163,10 @@ def search_issues(jql: str, max_results: int = 100, extra_fields: list | None = 
             "created": issue.fields.created,
             "updated": issue.fields.updated,
             "description": issue.fields.description,
-        } | {k: getattr(issue.fields, k, None) for k in extra_fields}
+        }
+
+        extra = {k: get_field_value(getattr(issue.fields, k, None)) for k in extra_fields}
+        return base_fields | extra
 
     try:
         issues = get_jira_client(get_http_headers()).search_issues(jql, maxResults=max_results)

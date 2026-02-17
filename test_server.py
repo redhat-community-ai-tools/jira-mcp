@@ -254,6 +254,38 @@ class TestSearchIssues:
         assert exc_info.value.status_code == 400
         assert "JQL search failed" in str(exc_info.value.detail)
 
+    def test_search_issues_complex_field(self, mock_jira_client):
+        """Test search_issues with complex fields like Resolution and list of objects"""
+        # Create a mock issue
+        issue = MockJiraIssue("TEST-1", "First Issue")
+
+        # Create a complex object (like Resolution)
+        class ResolutionObj:
+            def __init__(self, name):
+                self.name = name
+
+        issue.fields.resolution = ResolutionObj("Fixed")
+
+        # Also test list of objects (like components)
+        class ComponentObj:
+            def __init__(self, name):
+                self.name = name
+
+        issue.fields.components = [ComponentObj("Frontend"), ComponentObj("Backend")]
+
+        mock_jira_client.search_issues.return_value = [issue]
+
+        result = server.search_issues.fn(
+            "project = TEST", max_results=50, extra_fields=["resolution", "components"]
+        )
+
+        assert "TEST-1" in result
+        assert "Fixed" in result # extracted from resolution.name
+        assert "Frontend" in result # extracted from components[0].name
+        assert "Backend" in result # extracted from components[1].name
+
+        mock_jira_client.search_issues.assert_called_once_with("project = TEST", maxResults=50)
+
 
 class TestProjectOperations:
     """Test project-related tools"""
