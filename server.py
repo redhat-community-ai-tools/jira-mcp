@@ -6,9 +6,9 @@ import types
 from dotenv import load_dotenv
 from jira import JIRA
 from fastmcp import FastMCP
+from fastmcp.server.dependencies import get_http_headers
 from fastapi import HTTPException
 import json
-import logging
 
 ## Custom fields IDs
 QA_CONTACT_FID = "customfield_12315948"
@@ -21,12 +21,36 @@ JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
 JIRA_ENABLE_WRITE_OPERATIONS_STRING = os.getenv("JIRA_ENABLE_WRITE", "false")
 ENABLE_WRITE = JIRA_ENABLE_WRITE_OPERATIONS_STRING.lower() == "true"
 
-if not all([JIRA_URL, JIRA_API_TOKEN]):
-    raise RuntimeError("Missing JIRA_URL or JIRA_API_TOKEN environment variables")
+jira_client = JIRA(server=JIRA_URL, token_auth=JIRA_API_TOKEN)
 
 # ─── 2. Create a Jira client ───────────────────────────────────────────────────
 #    Uses token_auth (API token) for authentication.
-jira_client = JIRA(server=JIRA_URL, token_auth=JIRA_API_TOKEN)
+
+
+def get_jira_client(headers: dict[str, str]):
+    """
+    Get a JIRA client instance.
+
+    If a global jira_client exists (stdio mode), use it.
+    Otherwise, create a new client using the authorization header (server mode).
+    """
+    global jira_client
+
+    # If we have a global client (stdio mode with env token), use it
+    if jira_client is not None:
+        return jira_client
+
+    # Server mode: extract token from authorization header
+    auth_header = headers.get("authorization", headers.get("Authorization"))
+    if auth_header:
+        parts = auth_header.split(" ")
+        if len(parts) != 2:
+            raise RuntimeError("Invalid Authorization header format. Expected: 'Bearer <token>'")
+        token = parts[1]
+        return JIRA(server=JIRA_URL, token_auth=token)
+
+    raise RuntimeError("No access token available. Provide Authorization header with Bearer token.")
+
 
 # ─── 3. Instantiate the MCP server ─────────────────────────────────────────────
 mcp = FastMCP("Jira Context Server")
@@ -36,11 +60,11 @@ mcp = FastMCP("Jira Context Server")
 @mcp.tool()
 def get_jira(issue_key: str) -> str:
     """
-    Fetch the Jira issue identified by 'issue_key' using jira_client,
-    then return a Markdown string: "# ISSUE-KEY: summary\n\ndescription"
+    Fetch the Jira issue identified by 'issue_key' then
+    return a Markdown string: "# ISSUE-KEY: summary\n\ndescription"
     """
     try:
-        issue = jira_client.issue(issue_key)
+        issue = get_jira_client(get_http_headers()).issue(issue_key)
     except Exception as e:
         # If the JIRA client raises an error (e.g. issue not found),
         # wrap it in an HTTPException so MCP/Client sees a 4xx/5xx.
@@ -90,7 +114,7 @@ def search_issues(jql: str, max_results: int = 100) -> str:
         }
 
     try:
-        issues = jira_client.search_issues(jql, maxResults=max_results)
+        issues = get_jira_client(get_http_headers()).search_issues(jql, maxResults=max_results)
         return to_markdown((simplify_issue(issue) for issue in issues))
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"JQL search failed: {e}")
@@ -100,7 +124,7 @@ def search_issues(jql: str, max_results: int = 100) -> str:
 def search_users(query: str, max_results: int = 10) -> str:
     """Search users by query."""
     try:
-        users = jira_client.search_users(query, maxResults=max_results)
+        users = get_jira_client(get_http_headers()).search_users(query, maxResults=max_results)
         return to_markdown([u.raw for u in users])
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to search users: {e}")
@@ -110,7 +134,7 @@ def search_users(query: str, max_results: int = 10) -> str:
 def list_projects() -> str:
     """List all projects."""
     try:
-        projects = jira_client.projects()
+        projects = get_jira_client(get_http_headers()).projects()
         return to_markdown([p.raw for p in projects])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch projects: {e}")
@@ -120,7 +144,7 @@ def list_projects() -> str:
 def get_project(project_key: str) -> str:
     """Get a project by key."""
     try:
-        project = jira_client.project(project_key)
+        project = get_jira_client(get_http_headers()).project(project_key)
         return to_markdown(project)
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to fetch project: {e}")
@@ -130,7 +154,7 @@ def get_project(project_key: str) -> str:
 def get_project_components(project_key: str) -> str:
     """Get components for a project."""
     try:
-        components = jira_client.project_components(project_key)
+        components = get_jira_client(get_http_headers()).project_components(project_key)
         return to_markdown([c.raw for c in components])
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to fetch components: {e}")
@@ -140,7 +164,7 @@ def get_project_components(project_key: str) -> str:
 def get_project_versions(project_key: str) -> str:
     """Get versions for a project."""
     try:
-        versions = jira_client.project_versions(project_key)
+        versions = get_jira_client(get_http_headers()).project_versions(project_key)
         return to_markdown([v.raw for v in versions])
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to fetch versions: {e}")
@@ -150,7 +174,7 @@ def get_project_versions(project_key: str) -> str:
 def get_project_roles(project_key: str) -> str:
     """Get roles for a project."""
     try:
-        roles = jira_client.project_roles(project_key)
+        roles = get_jira_client(get_http_headers()).project_roles(project_key)
         return to_markdown(roles)
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to fetch roles: {e}")
@@ -160,7 +184,7 @@ def get_project_roles(project_key: str) -> str:
 def get_project_permission_scheme(project_key: str) -> str:
     """Get permission scheme for a project."""
     try:
-        scheme = jira_client.project_permissionscheme(project_key)
+        scheme = get_jira_client(get_http_headers()).project_permissionscheme(project_key)
         return to_markdown(scheme.raw)
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to fetch permission scheme: {e}")
@@ -170,7 +194,7 @@ def get_project_permission_scheme(project_key: str) -> str:
 def get_project_issue_types(project_key: str) -> str:
     """Get issue types for a project."""
     try:
-        types = jira_client.project_issue_types(project_key)
+        types = get_jira_client(get_http_headers()).project_issue_types(project_key)
         return to_markdown([t.raw for t in types])
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to fetch issue types: {e}")
@@ -180,7 +204,7 @@ def get_project_issue_types(project_key: str) -> str:
 def get_current_user() -> str:
     """Get current user info."""
     try:
-        user = jira_client.myself()
+        user = get_jira_client(get_http_headers()).myself()
         return to_markdown(user)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch current user: {e}")
@@ -190,7 +214,7 @@ def get_current_user() -> str:
 def get_user(account_id: str) -> str:
     """Get user by account ID."""
     try:
-        user = jira_client.user(account_id)
+        user = get_jira_client(get_http_headers()).user(account_id)
         return to_markdown(user.raw)
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to fetch user: {e}")
@@ -202,7 +226,7 @@ def get_assignable_users_for_project(
 ) -> str:
     """Get assignable users for a project."""
     try:
-        users = jira_client.search_assignable_users_for_projects(
+        users = get_jira_client(get_http_headers()).search_assignable_users_for_projects(
             query, project_key, maxResults=max_results
         )
         return to_markdown([u.raw for u in users])
@@ -214,7 +238,7 @@ def get_assignable_users_for_project(
 def get_assignable_users_for_issue(issue_key: str, query: str = "", max_results: int = 10) -> str:
     """Get assignable users for an issue."""
     try:
-        users = jira_client.search_assignable_users_for_issues(
+        users = get_jira_client(get_http_headers()).search_assignable_users_for_issues(
             query, issueKey=issue_key, maxResults=max_results
         )
         return to_markdown([u.raw for u in users])
@@ -226,7 +250,9 @@ def get_assignable_users_for_issue(issue_key: str, query: str = "", max_results:
 def list_boards(max_results: int = 10, project_key_or_id: str = None) -> str:
     """List boards, optionally filtered by project."""
     try:
-        boards = jira_client.boards(maxResults=max_results, projectKeyOrID=project_key_or_id)
+        boards = get_jira_client(get_http_headers()).boards(
+            maxResults=max_results, projectKeyOrID=project_key_or_id
+        )
         return to_markdown([b.raw for b in boards])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch boards: {e}")
@@ -236,7 +262,7 @@ def list_boards(max_results: int = 10, project_key_or_id: str = None) -> str:
 def list_sprints(board_id: int, max_results: int = 10) -> str:
     """List sprints for a board."""
     try:
-        sprints = jira_client.sprints(board_id, maxResults=max_results)
+        sprints = get_jira_client(get_http_headers()).sprints(board_id, maxResults=max_results)
         return to_markdown([s.raw for s in sprints])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch sprints: {e}")
@@ -246,7 +272,7 @@ def list_sprints(board_id: int, max_results: int = 10) -> str:
 def get_sprint(sprint_id: int) -> str:
     """Get sprint by ID."""
     try:
-        sprint = jira_client.sprint(sprint_id)
+        sprint = get_jira_client(get_http_headers()).sprint(sprint_id)
         return to_markdown(sprint.raw)
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to fetch sprint: {e}")
@@ -256,7 +282,7 @@ def get_sprint(sprint_id: int) -> str:
 def get_sprints_by_name(board_id: int, state: str = None) -> str:
     """Get sprints by name for a board, optionally filtered by state."""
     try:
-        sprints = jira_client.sprints_by_name(board_id, state=state)
+        sprints = get_jira_client(get_http_headers()).sprints_by_name(board_id, state=state)
         return to_markdown(sprints)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch sprints by name: {e}")
@@ -287,7 +313,7 @@ def create_issue(
         if assignee:
             issue_dict["assignee"] = {"name": assignee}
 
-        new_issue = jira_client.create_issue(fields=issue_dict)
+        new_issue = get_jira_client(get_http_headers()).create_issue(fields=issue_dict)
         return f"Created issue {new_issue.key}: {summary}"
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to create issue: {e}")
@@ -303,7 +329,7 @@ def update_issue(
 ) -> str:
     """Update an existing Jira issue."""
     try:
-        issue = jira_client.issue(issue_key)
+        issue = get_jira_client(get_http_headers()).issue(issue_key)
         update_dict = {}
 
         if summary:
@@ -328,8 +354,8 @@ def update_issue(
 def add_comment(issue_key: str, comment_body: str) -> str:
     """Add a comment to a Jira issue."""
     try:
-        issue = jira_client.issue(issue_key)
-        comment = jira_client.add_comment(issue, comment_body)
+        issue = get_jira_client(get_http_headers()).issue(issue_key)
+        comment = get_jira_client(get_http_headers()).add_comment(issue, comment_body)
         return f"Added comment to {issue_key}: {comment.id}"
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to add comment to {issue_key}: {e}")
@@ -339,7 +365,7 @@ def add_comment(issue_key: str, comment_body: str) -> str:
 def delete_comment(issue_key: str, comment_id: str) -> str:
     """Delete a comment from a Jira issue."""
     try:
-        comment = jira_client.comment(issue_key, comment_id)
+        comment = get_jira_client(get_http_headers()).comment(issue_key, comment_id)
         comment.delete()
         return f"Deleted comment {comment_id} from {issue_key}"
     except Exception as e:
@@ -363,7 +389,7 @@ def get_issue_comments(issue_key: str) -> str:
         }
 
     try:
-        issue = jira_client.issue(issue_key)
+        issue = get_jira_client(get_http_headers()).issue(issue_key)
         return to_markdown((simplify_comment(c) for c in issue.fields.comment.comments))
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to get comments for {issue_key}: {e}")
@@ -373,8 +399,8 @@ def get_issue_comments(issue_key: str) -> str:
 def assign_issue(issue_key: str, assignee: str) -> str:
     """Assign a Jira issue to a user."""
     try:
-        issue = jira_client.issue(issue_key)
-        jira_client.assign_issue(issue, assignee)
+        issue = get_jira_client(get_http_headers()).issue(issue_key)
+        get_jira_client(get_http_headers()).assign_issue(issue, assignee)
         return f"Assigned issue {issue_key} to {assignee}"
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to assign issue {issue_key}: {e}")
@@ -384,8 +410,8 @@ def assign_issue(issue_key: str, assignee: str) -> str:
 def unassign_issue(issue_key: str) -> str:
     """Unassign a Jira issue."""
     try:
-        issue = jira_client.issue(issue_key)
-        jira_client.assign_issue(issue, None)
+        issue = get_jira_client(get_http_headers()).issue(issue_key)
+        get_jira_client(get_http_headers()).assign_issue(issue, None)
         return f"Unassigned issue {issue_key}"
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to unassign issue {issue_key}: {e}")
@@ -395,8 +421,8 @@ def unassign_issue(issue_key: str) -> str:
 def transition_issue(issue_key: str, transition_name: str, comment: str = None) -> str:
     """Transition a Jira issue to a new status."""
     try:
-        issue = jira_client.issue(issue_key)
-        transitions = jira_client.transitions(issue)
+        issue = get_jira_client(get_http_headers()).issue(issue_key)
+        transitions = get_jira_client(get_http_headers()).transitions(issue)
 
         # Find the transition by name
         transition_id = None
@@ -411,10 +437,12 @@ def transition_issue(issue_key: str, transition_name: str, comment: str = None) 
 
         # Perform the transition
         if comment:
-            jira_client.transition_issue(issue, transition_id, comment=comment)
+            get_jira_client(get_http_headers()).transition_issue(
+                issue, transition_id, comment=comment
+            )
             return f"Transitioned issue {issue_key} to '{transition_name}' with comment"
         else:
-            jira_client.transition_issue(issue, transition_id)
+            get_jira_client(get_http_headers()).transition_issue(issue, transition_id)
             return f"Transitioned issue {issue_key} to '{transition_name}'"
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to transition issue {issue_key}: {e}")
@@ -424,8 +452,8 @@ def transition_issue(issue_key: str, transition_name: str, comment: str = None) 
 def get_issue_transitions(issue_key: str) -> str:
     """Get available transitions for a Jira issue."""
     try:
-        issue = jira_client.issue(issue_key)
-        transitions = jira_client.transitions(issue)
+        issue = get_jira_client(get_http_headers()).issue(issue_key)
+        transitions = get_jira_client(get_http_headers()).transitions(issue)
         transition_list = [{"id": t["id"], "name": t["name"]} for t in transitions]
         return to_markdown(transition_list)
     except Exception as e:
@@ -438,7 +466,7 @@ def get_issue_transitions(issue_key: str) -> str:
 def delete_issue(issue_key: str) -> str:
     """Delete a Jira issue (use with caution)."""
     try:
-        issue = jira_client.issue(issue_key)
+        issue = get_jira_client(get_http_headers()).issue(issue_key)
         issue.delete()
         return f"Deleted issue {issue_key}"
     except Exception as e:
@@ -449,7 +477,7 @@ def delete_issue(issue_key: str) -> str:
 def add_issue_labels(issue_key: str, labels: list) -> str:
     """Add labels to a Jira issue."""
     try:
-        issue = jira_client.issue(issue_key)
+        issue = get_jira_client(get_http_headers()).issue(issue_key)
         current_labels = list(issue.fields.labels)
         new_labels = list(set(current_labels + labels))  # Remove duplicates
         issue.update(fields={"labels": new_labels})
@@ -462,7 +490,7 @@ def add_issue_labels(issue_key: str, labels: list) -> str:
 def remove_issue_labels(issue_key: str, labels: list) -> str:
     """Remove labels from a Jira issue."""
     try:
-        issue = jira_client.issue(issue_key)
+        issue = get_jira_client(get_http_headers()).issue(issue_key)
         current_labels = list(issue.fields.labels)
         new_labels = [label for label in current_labels if label not in labels]
         issue.update(fields={"labels": new_labels})
@@ -527,6 +555,15 @@ if __name__ == "__main__":
     args = parse_arguments()
 
     if args.transport == "stdio":
+        if not all([JIRA_URL, JIRA_API_TOKEN]):
+            raise RuntimeError("Missing JIRA_URL or JIRA_API_TOKEN environment variables")
         mcp.run(transport=args.transport)
     else:
+        if not JIRA_URL:
+            raise RuntimeError("Missing JIRA_URL environment variable")
+        # If running as a server, we use the access token from the request, not from the environment variable.
+        # This is more secure because each caller providers their own access token instead of having one
+        # shared token that everyone who can access the server can use.
+        JIRA_API_TOKEN = None
+        jira_client = None
         mcp.run(transport=args.transport, host=args.host, port=args.port)

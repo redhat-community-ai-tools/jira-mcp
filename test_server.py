@@ -2,9 +2,8 @@
 
 import pytest
 import os
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch, MagicMock
 from fastapi import HTTPException
-import json
 
 # Set up required environment variables before importing server module
 os.environ["JIRA_URL"] = "https://test.example.com"
@@ -95,7 +94,9 @@ class MockJiraComment:
 @pytest.fixture
 def mock_jira_client():
     """Create a mock Jira client"""
-    with patch("server.jira_client") as mock_client:
+    with patch("server.get_jira_client") as mock_get_client:
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
         yield mock_client
 
 
