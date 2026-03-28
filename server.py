@@ -118,7 +118,7 @@ def to_markdown(obj):
 
 
 @mcp.tool()
-def search_issues(jql: str, max_results: int = 100, extra_fields: list = []) -> str:
+def search_issues(jql: str, max_results: int = 100, extra_fields: list | None = None) -> str:
     """
     Search for Jira issues using Jira Query Language (JQL).
 
@@ -131,6 +131,8 @@ def search_issues(jql: str, max_results: int = 100, extra_fields: list = []) -> 
         max_results: Maximum number of issues to return (default is 100).
         extra_fields: Optional list of additional Jira field names to include in each result.
     """
+
+    extra_fields = extra_fields or []
 
     def simplify_issue(issue, extra_fields):
         """Extract only essential fields to avoid token limit issues"""
