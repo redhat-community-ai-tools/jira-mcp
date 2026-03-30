@@ -134,7 +134,7 @@ def search_issues(jql: str, max_results: int = 100, extra_fields: list | None = 
 
     extra_fields = extra_fields or []
 
-    def simplify_issue(issue, extra_fields):
+    def simplify_issue(issue):
         """Extract only essential fields to avoid token limit issues"""
 
         def get_field_value(field):
