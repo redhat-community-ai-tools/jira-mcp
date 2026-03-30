@@ -3,6 +3,7 @@
 import os
 import argparse
 import types
+from typing import Literal
 from dotenv import load_dotenv
 from jira import JIRA
 from fastmcp import FastMCP
@@ -10,7 +11,7 @@ from fastmcp.server.dependencies import get_http_headers
 from fastapi import HTTPException
 import json
 
-## Custom fields IDs
+# Custom fields IDs
 QA_CONTACT_FID = "customfield_12315948"
 
 # ─── 1. Load environment variables ─────────────────────────────────────────────
@@ -57,44 +58,95 @@ mcp = FastMCP("Jira Context Server")
 
 
 # ─── 4. Register the get_jira tool ─────────────────────────────────────────────
-@mcp.tool()
-def get_jira(issue_key: str) -> str:
-    """
-    Fetch the Jira issue identified by 'issue_key' then
-    return a Markdown string: "# ISSUE-KEY: summary\n\ndescription"
-    """
+def _get_jira(issue_key: str) -> str:
     try:
-        issue = get_jira_client(get_http_headers()).issue(issue_key)
+        return get_jira_client(get_http_headers()).issue(issue_key)
     except Exception as e:
         # If the JIRA client raises an error (e.g. issue not found),
         # wrap it in an HTTPException so MCP/Client sees a 4xx/5xx.
         raise HTTPException(status_code=404, detail=f"Failed to fetch Jira issue {issue_key}: {e}")
 
+
+@mcp.tool()
+def get_jira_raw(issue_key: str) -> str:
+    """
+    Fetch the Jira issue identified by 'issue_key' using get_jira_client,
+    then return a row JSON representing all details about the Jira issue.
+    """
+    return to_markdown(_get_jira(issue_key))
+
+
+@mcp.tool()
+def get_jira(issue_key: str, extra_fields: list = []) -> str:
+    """
+    Retrieve detailed information about a specific Jira issue in Markdown format.
+
+    Use this tool when you need to read the summary and description of a single issue.
+    By default, it returns the summary and description. Additional fields can be
+    requested via the 'extra_fields' parameter.
+
+    Args:
+        issue_key: The Jira issue key (e.g., 'TEST-123').
+        extra_fields: Optional list of additional Jira field names to include (e.g., ['priority', 'status', 'created']).
+    """
+    issue = _get_jira(issue_key)
+
     # Extract summary & description fields
     summary = issue.fields.summary or ""
     description = issue.fields.description or ""
 
-    return f"# {issue_key}: {summary}\n\n{description}"
+    output = f"# {issue_key}: {summary}\n\n{description}"
+
+    # If extra fields were requested, add them to the output as well
+    if extra_fields:
+        output += "\n"
+        for k in extra_fields:
+            output += f"\n{k} = {str(getattr(issue.fields, k, None))}"
+
+    return output
 
 
 def to_markdown(obj):
     if isinstance(obj, dict):
-        return "```json\n" + json.dumps(obj, indent=2) + "\n```"
+        return "```json\n" + json.dumps(obj, indent=2, sort_keys=True) + "\n```"
     elif hasattr(obj, "raw"):
-        return "```json\n" + json.dumps(obj.raw, indent=2) + "\n```"
+        return "```json\n" + json.dumps(obj.raw, indent=2, sort_keys=True) + "\n```"
     elif isinstance(obj, list) or isinstance(obj, types.GeneratorType):
-        return "\n".join((to_markdown(o) for o in obj))
+        return "\n".join([to_markdown(o) for o in obj])
     else:
         return str(obj)
 
 
 @mcp.tool()
-def search_issues(jql: str, max_results: int = 100) -> str:
-    """Search issues using JQL."""
+def search_issues(jql: str, max_results: int = 100, extra_fields: list | None = None) -> str:
+    """
+    Search for Jira issues using Jira Query Language (JQL).
+
+    Use this tool to find issues matching specific criteria (e.g., project, status,
+    assignee, or keywords). It returns a list of issues with their core fields:
+    key, summary, status, assignee, reporter, priority, issuetype, fixVersion, etc.
+
+    Args:
+        jql: A valid Jira Query Language string (e.g., 'project = "PROJ" AND status = "Open"').
+        max_results: Maximum number of issues to return (default is 100).
+        extra_fields: Optional list of additional Jira field names to include in each result.
+    """
+
+    extra_fields = extra_fields or []
 
     def simplify_issue(issue):
         """Extract only essential fields to avoid token limit issues"""
-        return {
+
+        def get_field_value(field):
+            if field is None:
+                return None
+            if hasattr(field, "name"):
+                return field.name
+            if isinstance(field, list):
+                return [get_field_value(item) for item in field]
+            return field
+
+        base_fields = {
             "key": issue.key,
             "summary": issue.fields.summary,
             "status": issue.fields.status.name if issue.fields.status else None,
@@ -112,6 +164,9 @@ def search_issues(jql: str, max_results: int = 100) -> str:
             "updated": issue.fields.updated,
             "description": issue.fields.description,
         }
+
+        extra = {k: get_field_value(getattr(issue.fields, k, None)) for k in extra_fields}
+        return base_fields | extra
 
     try:
         issues = get_jira_client(get_http_headers()).search_issues(jql, maxResults=max_results)
@@ -259,10 +314,14 @@ def list_boards(max_results: int = 10, project_key_or_id: str = None) -> str:
 
 
 @mcp.tool()
-def list_sprints(board_id: int, max_results: int = 10) -> str:
+def list_sprints(
+    board_id: int,
+    max_results: int = 10,
+    state: None | Literal["future"] | Literal["active"] | Literal["closed"] = None,
+) -> str:
     """List sprints for a board."""
     try:
-        sprints = get_jira_client(get_http_headers()).sprints(board_id, maxResults=max_results)
+        sprints = get_jira_client(get_http_headers()).sprints(board_id, maxResults=max_results, state=state)
         return to_markdown([s.raw for s in sprints])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch sprints: {e}")
@@ -297,21 +356,40 @@ def create_issue(
     summary: str,
     description: str = "",
     issue_type: str = "Task",
-    priority: str = "Medium",
-    assignee: str = None,
+    priority: str | None = None,
+    assignee: str | None = None,
+    extra_fields: dict = {},
 ) -> str:
-    """Create a new Jira issue."""
+    """
+    Create a new Jira issue.
+
+    Args:
+        project_key: The project key (e.g., 'TEST').
+        summary: The issue summary.
+        description: The issue description.
+        issue_type: The issue type (e.g., 'Epic', 'Task', 'Bug').
+        priority: The issue priority (depends on project, e.g., 'Medium' or 'Normal').
+        assignee: The username of the assignee.
+        extra_fields: Dictionary of additional fields to set (e.g., {'customfield_123': 'value', 'labels': ['label1']}).
+    """
     try:
         issue_dict = {
             "project": {"key": project_key},
             "summary": summary,
             "description": description,
             "issuetype": {"name": issue_type},
-            "priority": {"name": priority},
+            "priority": {"name": "Undefined"},
         }
 
         if assignee:
             issue_dict["assignee"] = {"name": assignee}
+
+        if priority:
+            issue_dict["priority"] = {"name": priority}
+
+        # Merge extra fields
+        if extra_fields:
+            issue_dict.update(extra_fields)
 
         new_issue = get_jira_client(get_http_headers()).create_issue(fields=issue_dict)
         return f"Created issue {new_issue.key}: {summary}"
@@ -322,10 +400,11 @@ def create_issue(
 @mcp.tool(enabled=ENABLE_WRITE)
 def update_issue(
     issue_key: str,
-    summary: str = None,
-    description: str = None,
-    priority: str = None,
-    assignee: str = None,
+    summary: str | None = None,
+    description: str | None = None,
+    priority: str | None = None,
+    assignee: str | None = None,
+    extra_fields: dict = {},
 ) -> str:
     """Update an existing Jira issue."""
     try:
@@ -340,6 +419,10 @@ def update_issue(
             update_dict["priority"] = {"name": priority}
         if assignee:
             update_dict["assignee"] = {"name": assignee}
+
+        # Merge extra fields
+        if extra_fields:
+            update_dict.update(extra_fields)
 
         if update_dict:
             issue.update(fields=update_dict)

@@ -2,6 +2,7 @@
 
 import pytest
 import os
+import json
 from unittest.mock import patch, MagicMock
 from fastapi import HTTPException
 
@@ -20,7 +21,11 @@ class MockJiraIssue:
 
     def __init__(self, key, summary="Test Summary", description="Test Description", **kwargs):
         self.key = key
-        self.fields = MagicMock()
+
+        class Fields:
+            pass
+
+        self.fields = Fields()
         self.fields.summary = summary
         self.fields.description = description
 
@@ -56,6 +61,19 @@ class MockJiraIssue:
         # Mock methods
         self.update = MagicMock()
         self.delete = MagicMock()
+
+        # Custom fields
+        self.fields.customfield_10000000 = 1
+
+        # Raw JSON, extremely simplified
+        self.raw = {
+            "key": key,
+            "fields": {
+                "description": description,
+                "summary": summary,
+                "customfield_10000000": self.fields.customfield_10000000,
+            },
+        }
 
 
 class MockJiraProject:
@@ -129,6 +147,17 @@ class TestGetJira:
         assert result == "# TEST-123: Test Issue\n\nThis is a test issue"
         mock_jira_client.issue.assert_called_once_with("TEST-123")
 
+    def test_get_jira_extra(self, mock_jira_client, sample_issue):
+        mock_jira_client.issue.return_value = sample_issue
+
+        result = server.get_jira.fn("TEST-123", ["created", "updated"])
+
+        assert (
+            result
+            == "# TEST-123: Test Issue\n\nThis is a test issue\n\ncreated = 2023-01-01T00:00:00.000+0000\nupdated = 2023-01-01T00:00:00.000+0000"
+        )
+        mock_jira_client.issue.assert_called_once_with("TEST-123")
+
     def test_get_jira_missing_fields(self, mock_jira_client):
         issue = MockJiraIssue("TEST-123", summary=None, description=None)
         mock_jira_client.issue.return_value = issue
@@ -136,6 +165,16 @@ class TestGetJira:
         result = server.get_jira.fn("TEST-123")
 
         assert result == "# TEST-123: \n\n"
+
+    def test_get_jira_extra_not_found(self, mock_jira_client, sample_issue):
+        mock_jira_client.issue.return_value = sample_issue
+
+        result = server.get_jira.fn("TEST-123", ["does_not_exist"])
+
+        assert result.startswith(
+            "# TEST-123: Test Issue\n\nThis is a test issue\n\ndoes_not_exist = None"
+        )
+        mock_jira_client.issue.assert_called_once_with("TEST-123")
 
     def test_get_jira_not_found(self, mock_jira_client):
         mock_jira_client.issue.side_effect = Exception("Issue not found")
@@ -145,6 +184,22 @@ class TestGetJira:
 
         assert exc_info.value.status_code == 404
         assert "Failed to fetch Jira issue NONEXISTENT-123" in str(exc_info.value.detail)
+
+    def test_get_jira_raw(self, mock_jira_client, sample_issue):
+        mock_jira_client.issue.return_value = sample_issue
+
+        result = server.get_jira_raw.fn("TEST-123")
+
+        expected_data = {
+            "key": sample_issue.key,
+            "fields": {
+                "description": sample_issue.fields.description,
+                "summary": sample_issue.fields.summary,
+                "customfield_10000000": 1,
+            },
+        }
+        assert result == "```json\n" + json.dumps(expected_data, indent=2, sort_keys=True) + "\n```"
+        mock_jira_client.issue.assert_called_once_with("TEST-123")
 
 
 class TestSearchIssues:
@@ -163,6 +218,25 @@ class TestSearchIssues:
         assert "TEST-2" in result
         assert "First Issue" in result
         assert "Second Issue" in result
+        assert '"customfield_10000000": 1' not in result
+        mock_jira_client.search_issues.assert_called_once_with("project = TEST", maxResults=50)
+
+    def test_search_issues_extra(self, mock_jira_client):
+        issues = [
+            MockJiraIssue("TEST-1", "First Issue"),
+            MockJiraIssue("TEST-2", "Second Issue", assignee="Jane Doe"),
+        ]
+        mock_jira_client.search_issues.return_value = issues
+
+        result = server.search_issues.fn(
+            "project = TEST", max_results=50, extra_fields=["customfield_10000000"]
+        )
+
+        assert "TEST-1" in result
+        assert "TEST-2" in result
+        assert "First Issue" in result
+        assert "Second Issue" in result
+        assert '"customfield_10000000": 1' in result
         mock_jira_client.search_issues.assert_called_once_with("project = TEST", maxResults=50)
 
     def test_search_issues_empty_result(self, mock_jira_client):
@@ -180,6 +254,38 @@ class TestSearchIssues:
 
         assert exc_info.value.status_code == 400
         assert "JQL search failed" in str(exc_info.value.detail)
+
+    def test_search_issues_complex_field(self, mock_jira_client):
+        """Test search_issues with complex fields like Resolution and list of objects"""
+        # Create a mock issue
+        issue = MockJiraIssue("TEST-1", "First Issue")
+
+        # Create a complex object (like Resolution)
+        class ResolutionObj:
+            def __init__(self, name):
+                self.name = name
+
+        issue.fields.resolution = ResolutionObj("Fixed")
+
+        # Also test list of objects (like components)
+        class ComponentObj:
+            def __init__(self, name):
+                self.name = name
+
+        issue.fields.components = [ComponentObj("Frontend"), ComponentObj("Backend")]
+
+        mock_jira_client.search_issues.return_value = [issue]
+
+        result = server.search_issues.fn(
+            "project = TEST", max_results=50, extra_fields=["resolution", "components"]
+        )
+
+        assert "TEST-1" in result
+        assert "Fixed" in result # extracted from resolution.name
+        assert "Frontend" in result # extracted from components[0].name
+        assert "Backend" in result # extracted from components[1].name
+
+        mock_jira_client.search_issues.assert_called_once_with("project = TEST", maxResults=50)
 
 
 class TestProjectOperations:
@@ -274,6 +380,31 @@ class TestWriteOperations:
         assert call_args["assignee"]["name"] == "john.doe"
 
     @patch("server.ENABLE_WRITE", True)
+    def test_create_issue_with_extra_fields(self, mock_jira_client):
+        new_issue = MockJiraIssue("TEST-457", "Extra Fields Issue")
+        mock_jira_client.create_issue.return_value = new_issue
+
+        extra_fields = {
+            "customfield_123": "value",
+            "labels": ["label1", "label2"],
+        }
+
+        result = server.create_issue.fn(
+            project_key="TEST",
+            summary="Extra Fields Issue",
+            extra_fields=extra_fields,
+        )
+
+        assert "Created issue TEST-457" in result
+        mock_jira_client.create_issue.assert_called_once()
+
+        call_args = mock_jira_client.create_issue.call_args[1]["fields"]
+        assert call_args["project"]["key"] == "TEST"
+        assert call_args["summary"] == "Extra Fields Issue"
+        assert call_args["customfield_123"] == "value"
+        assert call_args["labels"] == ["label1", "label2"]
+
+    @patch("server.ENABLE_WRITE", True)
     def test_update_issue_success(self, mock_jira_client, sample_issue):
         mock_jira_client.issue.return_value = sample_issue
 
@@ -283,6 +414,23 @@ class TestWriteOperations:
 
         assert "Updated issue TEST-123 successfully" in result
         sample_issue.update.assert_called_once()
+
+    @patch("server.ENABLE_WRITE", True)
+    def test_update_issue_with_extra_fields(self, mock_jira_client, sample_issue):
+        mock_jira_client.issue.return_value = sample_issue
+
+        extra_fields = {
+            "customfield_123": "value",
+            "labels": ["label1"],
+        }
+
+        result = server.update_issue.fn(issue_key="TEST-123", extra_fields=extra_fields)
+
+        assert "Updated issue TEST-123 successfully" in result
+        sample_issue.update.assert_called_once()
+        call_args = sample_issue.update.call_args[1]["fields"]
+        assert call_args["customfield_123"] == "value"
+        assert call_args["labels"] == ["label1"]
 
     @patch("server.ENABLE_WRITE", True)
     def test_add_comment_success(self, mock_jira_client, sample_issue):
@@ -496,7 +644,18 @@ class TestBoardsAndSprints:
 
         assert "Sprint 1" in result
         assert "Sprint 2" in result
-        mock_jira_client.sprints.assert_called_once_with(123, maxResults=10)
+        mock_jira_client.sprints.assert_called_once_with(123, maxResults=10, state=None)
+
+    def test_list_sprints_with_state(self, mock_jira_client):
+        sprints = [
+            MagicMock(raw={"id": 1, "name": "Active Sprint", "state": "active"}),
+        ]
+        mock_jira_client.sprints.return_value = sprints
+
+        result = server.list_sprints.fn(board_id=123, max_results=10, state="active")
+
+        assert "Active Sprint" in result
+        mock_jira_client.sprints.assert_called_once_with(123, maxResults=10, state="active")
 
     def test_get_sprint_success(self, mock_jira_client):
         sprint = MagicMock(raw={"id": 456, "name": "Test Sprint", "state": "active"})
