@@ -88,6 +88,22 @@ def to_markdown(obj):
         return str(obj)
 
 
+# Fields needed by search_issues; the Cloud /search/jql API returns IDs only unless fields are set.
+SEARCH_ISSUE_FIELDS = [
+    "summary",
+    "status",
+    "assignee",
+    QA_CONTACT_FID,
+    "reporter",
+    "priority",
+    "issuetype",
+    "fixVersion",
+    "created",
+    "updated",
+    "description",
+]
+
+
 @mcp.tool()
 def search_issues(jql: str, max_results: int = 100) -> str:
     """Search issues using JQL."""
@@ -114,7 +130,12 @@ def search_issues(jql: str, max_results: int = 100) -> str:
         }
 
     try:
-        issues = get_jira_client(get_http_headers()).search_issues(jql, maxResults=max_results)
+        client = get_jira_client(get_http_headers())
+        # jira>=3.10 routes Cloud calls to /rest/api/*/search/jql (legacy /search was removed).
+        # Data Center keeps using the classic search endpoint via the same method.
+        issues = client.search_issues(
+            jql, maxResults=max_results, fields=SEARCH_ISSUE_FIELDS
+        )
         return to_markdown((simplify_issue(issue) for issue in issues))
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"JQL search failed: {e}")
