@@ -23,7 +23,7 @@ httpx-sse==0.4.0
 idna==3.10
 iniconfig==2.1.0
 isodate==0.7.2
-jira==3.8.0
+jira==3.10.5
 jsonschema==4.25.1
 jsonschema-path==0.3.4
 jsonschema-specifications==2025.9.1

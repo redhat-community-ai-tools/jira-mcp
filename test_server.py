@@ -163,7 +163,11 @@ class TestSearchIssues:
         assert "TEST-2" in result
         assert "First Issue" in result
         assert "Second Issue" in result
-        mock_jira_client.search_issues.assert_called_once_with("project = TEST", maxResults=50)
+        mock_jira_client.search_issues.assert_called_once_with(
+            "project = TEST",
+            maxResults=50,
+            fields=server.SEARCH_ISSUE_FIELDS,
+        )
 
     def test_search_issues_empty_result(self, mock_jira_client):
         mock_jira_client.search_issues.return_value = []
